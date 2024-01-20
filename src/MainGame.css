@@ -1,0 +1,14 @@
+.maingame{
+    width: 100vw; 
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* border: 1px solid #000; */
+}
+
+.maingame_canvas {
+    width: 1024px;
+    height: 768px;
+    border: 1px solid #000;
+}
