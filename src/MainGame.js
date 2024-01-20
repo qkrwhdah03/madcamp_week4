@@ -12,12 +12,15 @@ function MainGame() {
     const get_player = useRef({});
     const socket = useRef(null);
     const map = useRef(null);
+    const bullet = useRef(null);
 
     // 키보드 입력 상태 받기
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
     const pressLeft  =  useRef(false);
     const pressRight  =  useRef(false);
+    const mousepointerX = useRef(null);
+    const mousepointerY = useRef(null);
 
     let velocity = 4;
 
@@ -111,15 +114,29 @@ function MainGame() {
                     break;
               }
         }
+        const handleCanvasClick = (e) => {
+            const bulletposition = [e.clientX,e.clientY];
+            bullet.current=bulletposition;
+            // 클릭한 위치와 방향 등을 서버에 전송
+        };
 
+        const handleMouseMove = (e) => {
+            mousepointerX.current=e.clientX;
+            mousepointerY.current=e.clientY;
+            console.log(mousepointerX.current, mousepointerY.current);
+        }
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("click", handleCanvasClick);
+        window.addEventListener("mousemove", handleMouseMove);
 
         return () => {
             soc.disconnect();
             window.removeEventListener("keydown", handleKeyDown);
             window.removeEventListener("keyup", handleKeyUp);
-          };
+            window.removeEventListener("click", handleCanvasClick);
+            window.removeEventListener("mousemove", handleMouseMove);
+        };
     }, []);
 
     useEffect(() => {
@@ -200,8 +217,25 @@ function MainGame() {
             }
         }
 
+        cur.dy=mousepointerY.current-context.canvas.offsetTop-cur.y+cameraY;
+        cur.dx=mousepointerX.current-context.canvas.offsetLeft-cur.x+cameraX;
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
+
+        // if (bullet.current){
+        //     console.log('발사', bullet.current);
+        //     const angle = Math.atan2(
+        //         bddaullet.current[1]-cur.y,
+        //         bullet.current[0]-cur.x
+        //     )
+        //     cur.angle = angle;
+        //     socket.current.emit("shoot_bullet", cur)
+        //     bullet.current=null;
+        // }
+        
+        
+
+
     };
 
     return (
