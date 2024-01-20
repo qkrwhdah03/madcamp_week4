@@ -11,7 +11,7 @@ function Enter(){
   
     const handleEnter = () =>{
       // 서버에 닉네임을 보내면서 socket.io 연결 요청
-      navigate('../mainGame', {replace:true, state:{nickname : nickname}})
+      navigate('../mainGame', {replace:false, state:{nickname : nickname}})
     }
   
     return (

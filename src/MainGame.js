@@ -11,7 +11,8 @@ function MainGame() {
 
     // 플레이어, 총알 정보 -> 렌더링에 사용
     const get_player = useRef({});
-    const bullet = useRef(null);
+    const bullets = useRef([]);
+    const bullet = useRef();
 
     // 맵 배경 이미지 저장
     const map = useRef(null);
@@ -32,6 +33,7 @@ function MainGame() {
 
 
     let velocity = 4;
+    let bulletvelocity = 20;
 
     useEffect(()=>{
 
@@ -77,6 +79,11 @@ function MainGame() {
             delete get_player.current[id];
         });
 
+
+        soc.on("bullets", (data)=>{
+            bullets.current.push(data);
+            console.log('총알들', bullets.current);
+        });
 
         // 배경 map 읽어오기
         const image = new Image();
@@ -251,18 +258,36 @@ function MainGame() {
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
 
-        // if (bullet.current){
-        //     console.log('발사', bullet.current);
-        //     const angle = Math.atan2(
-        //         bddaullet.current[1]-cur.y,
-        //         bullet.current[0]-cur.x
-        //     )
-        //     cur.angle = angle;
-        //     socket.current.emit("shoot_bullet", cur)
-        //     bullet.current=null;
-        // }
+        if (bullet.current){
+            console.log('발사', bullet.current);
+            const angle = Math.atan2(
+                bullet.current[1]-context.canvas.offsetTop-cur.y+cameraY,
+                bullet.current[0]-context.canvas.offsetLeft-cur.x+cameraX
+            )
+            cur.angle = angle;
+            console.log('총알 각도',angle);
+            socket.current.emit("shoot_bullet", {
+                x: cur.x,
+                y: cur.y,
+                angle:cur.angle
+            })
+            bullet.current=null;
+        }
+        console.log(bullets.current);
         
-        
+        for (var i=0;i<bullets.current.length;i++) {
+            let bullet1 = bullets.current[i];
+            bullet1.x += Math.cos(bullet1.angle)*bulletvelocity;
+            bullet1.y += Math.sin(bullet1.angle)*bulletvelocity;
+            context.fillStyle="#FFFFFF"
+            context.beginPath();
+            context.arc(
+                bullet1.x-cameraX+30*Math.cos(bullet1.angle)-20*Math.sin(bullet1.angle), 
+                bullet1.y-cameraY+30*Math.sin(bullet1.angle)+20*Math.cos(bullet1.angle), 
+                5, 0, 2*Math.PI
+            );
+            context.fill();
+        }
 
 
     };
