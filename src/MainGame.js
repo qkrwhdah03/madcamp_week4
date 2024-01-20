@@ -8,19 +8,28 @@ function MainGame() {
     const nickname = state?.nickname;
     const [myId, setMyId] = useState(null);
     const canvasRef = useRef(null); // canvas 
-   // const users = useRef([]);
+
+    // 플레이어, 총알 정보 -> 렌더링에 사용
     const get_player = useRef({});
-    const socket = useRef(null);
-    const map = useRef(null);
     const bullet = useRef(null);
+
+    // 맵 배경 이미지 저장
+    const map = useRef(null);
+    const troop = useRef(null);
+
+    // 서버 통신 소켓
+    const socket = useRef(null);
 
     // 키보드 입력 상태 받기
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
     const pressLeft  =  useRef(false);
     const pressRight  =  useRef(false);
+
+    // 마우스 위치 좌표 넣기
     const mousepointerX = useRef(null);
     const mousepointerY = useRef(null);
+
 
     let velocity = 4;
 
@@ -69,12 +78,20 @@ function MainGame() {
         });
 
 
-         // 배경 map 읽어오기
+        // 배경 map 읽어오기
         const image = new Image();
         image.src = process.env.PUBLIC_URL + '/map.png'; // 이미지 파일 경로 설정
         image.onload = () =>{
             console.log("Read Image Done");
             map.current = image;
+        }
+
+        // User 캐릭터 가져오기
+        const user_image = new Image();
+        user_image.src = process.env.PUBLIC_URL + '/troop/handgun/move/survivor-move_handgun_0.png';
+        user_image.onload = ()=>{
+            console.log("Read user Image Done");
+            troop.current = user_image;
         }
 
         const handleKeyDown = (e)=>{
@@ -123,7 +140,6 @@ function MainGame() {
         const handleMouseMove = (e) => {
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
-            console.log(mousepointerX.current, mousepointerY.current);
         }
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener("keydown", handleKeyDown);
@@ -164,7 +180,6 @@ function MainGame() {
         let cur = get_player.current[myId];
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-
         // 맵 그리기, 카메라 설정
         let mapsizeX = 1600;
         let mapSizeY = 1600;
@@ -187,8 +202,20 @@ function MainGame() {
         for (let userId in get_player.current) {
             const user = get_player.current[userId];
             // Draw the user at user.x, user.y (adjust as needed)
-            context.fillStyle = user.color; // Set user color
-            context.fillRect(user.x - cameraX, user.y - cameraY, 50, 50); // Example rectangle, adjust size as needed
+            //context.fillStyle = user.color; // Set user color
+            //context.fillRect(user.x - cameraX, user.y - cameraY, 50, 50); // Example rectangle, adjust size as needed
+            const tx = user.x - cameraX ; // 77.4 이미지 크기임
+            const ty = user.y - cameraY ; // 66 이미지 크기임
+            const angle = Math.atan2(user.dy, user.dx);
+            context.save();
+            context.translate(tx, ty);
+            context.rotate(angle);
+            context.scale(0.3, 0.3);
+            context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
+            context.rotate(-angle);
+            context.translate(-tx, -ty);
+            context.restore();
+            
         }
 
         // 현재 자기 자신 위치 업데이트
@@ -217,8 +244,10 @@ function MainGame() {
             }
         }
 
+        // 마우스 포인터 위치 계산
         cur.dy=mousepointerY.current-context.canvas.offsetTop-cur.y+cameraY;
         cur.dx=mousepointerX.current-context.canvas.offsetLeft-cur.x+cameraX;
+
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
 
