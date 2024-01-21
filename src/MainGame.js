@@ -1,9 +1,10 @@
 import './MainGame.css'
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import io from "socket.io-client";
 
 function MainGame() {
+    const navigate = useNavigate();
     const {state} = useLocation();
     const nickname = state?.nickname;
     const [myId, setMyId] = useState(null);
@@ -43,7 +44,7 @@ function MainGame() {
         const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
         // socket 연결 성공 시
         soc.on("connect", () => {
-            console.log("ㅇㅁㅈSocket connected successfully!");
+            console.log("Socket connected successfully!");
             soc.emit('username',nickname);
             socket.current = soc;
         });
@@ -301,7 +302,6 @@ function MainGame() {
 
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
-
         
 
         handleCollisions();
@@ -335,11 +335,18 @@ function MainGame() {
                 // 충돌 발생! 여기서 필요한 동작 수행
                 console.log('캐릭터와 총알이 충돌했습니다!');
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
+                cur.state -= 10; // 체력 10 감소
+                console.log(cur.state);
+
                 // 그리고 충돌한 총알 제거 (bullets.current 배열에서 해당 총알 삭제)
                 delete bullets.current[bulletId];
                 socket.current.emit('collision', bullet1);
 
             }
+        }
+        if(cur.state < 0){ // 사망 처리
+            socket.current.emit("death", cur);
+            navigate('../Restart', {replace:true, state:{nickname : nickname}});
         }
     }
 
