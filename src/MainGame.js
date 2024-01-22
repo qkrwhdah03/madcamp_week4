@@ -10,19 +10,19 @@ function MainGame() {
     const [myId, setMyId] = useState(null);
     const canvasRef = useRef(null); // canvas 
 
-    // 플레이어, 총알 정보 -> 렌더링에 사용
+    // 플레이어, 총알 위치 정보 -> 렌더링에 사용
     const get_player = useRef({});
     const bullets = useRef({});
     const bullet = useRef();
 
-    // 맵 배경 이미지 저장
+    // 맵 배경 이미지 저장 변수
     const map = useRef(null);
     const troop = useRef(null);
 
     // 서버 통신 소켓
     const socket = useRef(null);
 
-    // 키보드 입력 상태 받기
+    // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
     const pressLeft  =  useRef(false);
@@ -32,9 +32,25 @@ function MainGame() {
     const mousepointerX = useRef(null);
     const mousepointerY = useRef(null);
 
+    // 변수 값 설정
+    const map_src = '/map.png'; // 배경맵 경로
+    const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로 
+    const velocity = 4; // 유저 이동 속도
+    const bulletvelocity = 20; // 총알 속또
+    const reload_time = 1000 // 재장전 시간 (ms)
+    const rendering_interval = 20 // 렌더링 주기 (ms)
+    const canvas_w = 1024; // 캔버스 크기
+    const canvas_h = 768; // 캔버스 크기
+    const map_x = 1600  // 전체 맵 크기 
+    const map_y = 1600 // 전체 맵 크기
+    const total_bullet_num = 7; // 탄창 총알 수
+    const damage = 10;  // 총알 데미지
+    const collision_distance = 20; // 총알 충돌 거리 설정
 
-    let velocity = 4;
-    let bulletvelocity = 20;
+    // User 상태 관련 변수들
+    const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
+    const reload_frame_number = useRef(reload_time / rendering_interval) // 재장전 프레임 수 = 재장전시간 / 렌더링 주기
+
 
     useEffect(()=>{
 
@@ -94,7 +110,7 @@ function MainGame() {
         });
         // 배경 map 읽어오기
         const image = new Image();
-        image.src = process.env.PUBLIC_URL + '/map.png'; // 이미지 파일 경로 설정
+        image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
         image.onload = () =>{
             console.log("Read Image Done");
             map.current = image;
@@ -102,7 +118,7 @@ function MainGame() {
 
         // User 캐릭터 가져오기
         const user_image = new Image();
-        user_image.src = process.env.PUBLIC_URL + '/troop/handgun/move/survivor-move_handgun_0.png';
+        user_image.src = process.env.PUBLIC_URL + troop_src;
         user_image.onload = ()=>{
             console.log("Read user Image Done");
             troop.current = user_image;
@@ -148,7 +164,6 @@ function MainGame() {
         const handleCanvasClick = (e) => {
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
-            // 클릭한 위치와 방향 등을 서버에 전송
         };
 
         const handleMouseMove = (e) => {
@@ -173,13 +188,13 @@ function MainGame() {
         // 컴포넌트가 마운트된 후 canvas에 접근
         if (canvasRef.current && socket.current && map.current) {
             const canvas = canvasRef.current;
-            canvas.width = 1024;
-            canvas.height = 768;
+            canvas.width = canvas_w;
+            canvas.height = canvas_h;
 
             // 1000ms마다 renderGame 호출
             const intervalId = setInterval(() => {
                 renderGame();
-            }, 20);
+            }, rendering_interval);
 
             return () => {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
@@ -195,8 +210,8 @@ function MainGame() {
         context.clearRect(0, 0, canvas.width, canvas.height);
 
         // 맵 그리기, 카메라 설정
-        let mapsizeX = 1600;
-        let mapSizeY = 1600;
+        let mapsizeX = map_x;
+        let mapSizeY = map_y;
         let cameraX = cur.x - canvas.width / 2; 
         let cameraY = cur.y - canvas.height/ 2;
         if(cameraX < 0){
@@ -234,19 +249,32 @@ function MainGame() {
 
          // 총알 그리기
         if (bullet.current){
-            //console.log('발사', bullet.current);
-            const angle = Math.atan2(
-                bullet.current[1]-context.canvas.offsetTop-cur.y+cameraY,
-                bullet.current[0]-context.canvas.offsetLeft-cur.x+cameraX
-            )
-            cur.angle = angle;
-            //console.log('총알 각도',angle);
-            socket.current.emit("shoot_bullet", {
-                x: cur.x + 30*Math.cos(cur.angle)-20*Math.sin(cur.angle), //캐릭터 총구로 보정 
-                y: cur.y +30*Math.sin(cur.angle)+20*Math.cos(cur.angle), // 캐릭터 총구로 보정
-                angle:cur.angle
-            })
-            bullet.current=null;
+            if(num_bullet.current > 0){ // 총알이 남아 있으면
+                const angle = Math.atan2(
+                    bullet.current[1]-context.canvas.offsetTop-cur.y+cameraY,
+                    bullet.current[0]-context.canvas.offsetLeft-cur.x+cameraX
+                )
+                cur.angle = angle;
+                //console.log('총알 각도',angle);
+                socket.current.emit("shoot_bullet", {
+                    x: cur.x + 30*Math.cos(cur.angle)-20*Math.sin(cur.angle), //캐릭터 총구로 보정 
+                    y: cur.y +30*Math.sin(cur.angle)+20*Math.cos(cur.angle), // 캐릭터 총구로 보정
+                    angle:cur.angle
+                })
+                num_bullet.current -= 1; 
+                bullet.current = null; 
+            }
+            else {
+                // 재장전
+                if(reload_frame_number.current > 0){
+                    reload_frame_number.current -= 1;
+                } else{
+                    reload_frame_number.current = reload_time / rendering_interval;
+                    num_bullet.current = total_bullet_num;
+                    bullet.current = null; 
+                }
+                
+            }
         }
         //console.log(bullets.current);
         const filtered_bullets = {};
@@ -304,9 +332,7 @@ function MainGame() {
         socket.current.emit("send_location", cur);
         
 
-        handleCollisions();
-
-
+        handleCollisions()
     };
     function calculateDistance(x1, y1, x2, y2) {
         const dx = x2 - x1;
@@ -322,8 +348,7 @@ function MainGame() {
         );
     
         // 일정 거리 내에 있으면 충돌로 간주
-        const collisionDistance = 20; // 조절 가능한 거리
-        return distance < collisionDistance;
+        return distance < collision_distance;
     }
 
     function handleCollisions() {
@@ -335,13 +360,12 @@ function MainGame() {
                 // 충돌 발생! 여기서 필요한 동작 수행
                 console.log('캐릭터와 총알이 충돌했습니다!');
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
-                cur.state -= 10; // 체력 10 감소
+                cur.state -= damage; // 체력 10 감소
                 console.log(cur.state);
 
                 // 그리고 충돌한 총알 제거 (bullets.current 배열에서 해당 총알 삭제)
                 delete bullets.current[bulletId];
                 socket.current.emit('collision', bullet1);
-
             }
         }
         if(cur.state < 0){ // 사망 처리
@@ -352,7 +376,7 @@ function MainGame() {
 
     return (
     <div className='maingame'>
-        <canvas ref={canvasRef} className='maingame_canvas'></canvas>
+        <canvas ref={(ref) => { canvasRef.current = ref; } } className='maingame_canvas'></canvas>
     </div>
     );
 }
