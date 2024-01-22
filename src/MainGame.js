@@ -8,7 +8,6 @@ function MainGame() {
     const {state} = useLocation();
     const nickname = state?.nickname;
     const [myId, setMyId] = useState(null);
-    const [hp_val, setHP] = useState(100);
     const canvasRef = useRef(null); // canvas 
 
     // 플레이어, 총알 위치 정보 -> 렌더링에 사용
