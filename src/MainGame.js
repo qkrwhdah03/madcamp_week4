@@ -18,6 +18,7 @@ function MainGame() {
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
     const troop = useRef(null);
+    const bullet_img = useRef(null);
 
     // 서버 통신 소켓
     const socket = useRef(null);
@@ -35,6 +36,7 @@ function MainGame() {
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
     const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로 
+    const bullet_src = '/bullet.png';
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
     const reload_time = 1000 // 재장전 시간 (ms)
@@ -43,7 +45,7 @@ function MainGame() {
     const canvas_h = 768; // 캔버스 크기
     const map_x = 1600  // 전체 맵 크기 
     const map_y = 1600 // 전체 맵 크기
-    const total_bullet_num = 7; // 탄창 총알 수
+    const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
     const collision_distance = 20; // 총알 충돌 거리 설정
 
@@ -108,6 +110,7 @@ function MainGame() {
             delete bullets.current[data.bulletId];
             console.log('총알 맞앗어요');
         });
+        
         // 배경 map 읽어오기
         const image = new Image();
         image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
@@ -122,6 +125,14 @@ function MainGame() {
         user_image.onload = ()=>{
             console.log("Read user Image Done");
             troop.current = user_image;
+        }
+
+        // 총알 이미지 가져오기
+        const bullet_image = new Image();
+        bullet_image.src = process.env.PUBLIC_URL + bullet_src;
+        bullet_image.onload = ()=>{
+            console.log("Read bullet Image Done");
+            bullet_img.current = bullet_image;
         }
 
         const handleKeyDown = (e)=>{
@@ -169,11 +180,22 @@ function MainGame() {
         const handleMouseMove = (e) => {
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
-        }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                console.log('현재 창이 활성화되어 있습니다.');
+              } else {
+                console.log('현재 창이 비활성화되어 있습니다.');
+                // 비활성화 되면..? 어떻게 처리?
+              }
+        };
+
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener("keydown", handleKeyDown);
         window.addEventListener("click", handleCanvasClick);
         window.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener('visibilitychange', handleVisibilityChange); 
 
         return () => {
             soc.disconnect();
@@ -181,6 +203,7 @@ function MainGame() {
             window.removeEventListener("keyup", handleKeyUp);
             window.removeEventListener("click", handleCanvasClick);
             window.removeEventListener("mousemove", handleMouseMove);
+            document.removeEventListener('visibilitychange', handleVisibilityChange); 
         };
     }, []);
 
@@ -276,21 +299,30 @@ function MainGame() {
         //console.log(bullets.current);
         const filtered_bullets = {};
         for (let bulletId in bullets.current) {
-            let bullet1 = bullets.current[bulletId];
-            bullet1.x += Math.cos(bullet1.angle)*bulletvelocity;
-            bullet1.y += Math.sin(bullet1.angle)*bulletvelocity;
-            context.fillStyle="#FFFFFF"
-            context.beginPath();
-            context.arc(
-                bullet1.x-cameraX, 
-                bullet1.y-cameraY, 
-                5, 0, 2*Math.PI
-            );
-            context.fill();
-            if(bullet1.x < 0 || bullet1.y < 0 || bullet1.x > mapsizeX || bullet1.y > mapSizeY){
+            let bullet_cur = bullets.current[bulletId];
+            bullet_cur.x += Math.cos(bullet_cur.angle)*bulletvelocity;
+            bullet_cur.y += Math.sin(bullet_cur.angle)*bulletvelocity;
+            // context.fillStyle="#FFFFFF"
+            // context.beginPath();
+            // context.arc(
+            //     bullet1.x-cameraX, 
+            //     bullet1.y-cameraY, 
+            //     5, 0, 2*Math.PI
+            // );
+            // context.fill();
+            
+            context.save();
+            context.translate(bullet_cur.x - cameraX, bullet_cur.y- cameraY);
+            context.rotate(bullet_cur.angle);
+            context.drawImage(bullet_img.current, -bullet_img.current.width / 2, -bullet_img.current.height / 2);
+            context.rotate(-bullet_cur.angle);
+            context.translate(-bullet_cur.x + cameraX, bullet_cur.y + cameraY);
+            context.restore(); 
+
+            if(bullet_cur.x < 0 || bullet_cur.y < 0 || bullet_cur.x > mapsizeX || bullet_cur.y > mapSizeY){
                 continue;
             } else{
-                filtered_bullets[bullet1.bulletId]=bullet1;
+                filtered_bullets[bullet_cur.bulletId] = bullet_cur;
             }
         }
         bullets.current = filtered_bullets;
