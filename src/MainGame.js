@@ -54,7 +54,6 @@ function MainGame() {
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
     const reload_frame_number = useRef(reload_time / rendering_interval) // 재장전 프레임 수 = 재장전시간 / 렌더링 주기
 
-
     useEffect(()=>{
 
         // 초기화 후, socket.io connection 만들기
@@ -94,6 +93,7 @@ function MainGame() {
                 player.dx = data.dx;
                 player.dy = data.dy;
                 player.state = data.state;
+                player.kill = data.kill;
             }
         });
 
@@ -112,6 +112,14 @@ function MainGame() {
             delete bullets.current[data.bulletId];
             console.log('총알 맞앗어요');
         });
+
+        soc.on('killed', (user_id)=>{
+            console.log("killed");
+            const player = get_player.current[user_id];
+            if(player){
+                player.kill += 1;
+            }
+        })
         
         // 배경 map 읽어오기
         const image = new Image();
@@ -255,14 +263,13 @@ function MainGame() {
 
 
         // Health Point 그리기
-       const drawProgressBar = (x, y, val) =>{
-            const length = 60; 
+       const drawProgressBar = (x, y, val, max, color, length, height) =>{ 
             context.fillStyle = '#ddd';
-            context.fillRect(x, y, length, 10);
+            context.fillRect(x, y, length, height);
 
             // Draw the filled part of the progress bar
-            context.fillStyle = '#4CAF50';
-            context.fillRect(x, y, length * val/100, 10);
+            context.fillStyle = color;
+            context.fillRect(x, y, length * val/max, height);
        }
 
         // 다른 유저들 위치 표시
@@ -281,7 +288,10 @@ function MainGame() {
             context.translate(-tx, -ty);
             context.restore();
             
-            drawProgressBar(tx-30, ty-50, user.state);
+            drawProgressBar(tx-30, ty-50, user.state, 100,'#4CAF50', 60 ,6);
+            if (userId === myId){ // 총알 표시
+                drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2)
+            }
         }
 
          // 총알 발사 처리
@@ -343,28 +353,30 @@ function MainGame() {
 
         // 총알 충돌처리 
         handleCollisions(cur);
-
-
-        // 남은 총알 수 표시하기
-
+        
         // 킬 수 표시하기
+        context.font = '20px Arial';
+        context.fillStyle = '#FFF';
+        context.textAlign = 'center';
+        context.fillText("Kill : "+ cur.kill, canvas.width- 80, 30);
+
 
         // 현재 자기 자신 위치 업데이트
         if(pressDown.current){
             cur.y += velocity;
-            if(cur.y > mapSizeY- 50){ // 50은 user size
+            if(cur.y > mapSizeY- 30){ // 50은 user size
                 cur.y -= velocity;
             }
         }
         if(pressUp.current){
             cur.y -= velocity;
-            if(cur.y < 0){
+            if(cur.y < 30){
                 cur.y += velocity;
             }
         }
         if(pressLeft.current){
             cur.x -= velocity;
-            if(cur.x < 0){
+            if(cur.x < 30){
                 cur.x += velocity;
             }
         }
@@ -418,13 +430,13 @@ function MainGame() {
                 socket.current.emit('collision', bullet_cur);
 
                 if(cur.state <= 0){ // 사망 처리
-                    socket.current.emit("death", cur);
+                    socket.current.emit("death", cur, bullet_cur);
                     // bullet_cur.user로 점수나 킬 올리기
                     navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
                 }
             }
         }
-    }
+    }  
 
     return (
     <div className='maingame' >
