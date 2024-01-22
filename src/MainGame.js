@@ -188,6 +188,8 @@ function MainGame() {
               } else {
                 console.log('현재 창이 비활성화되어 있습니다.');
                 // 비활성화 되면..? 어떻게 처리?
+                // 1.Navigate으로 connection이 끊긴 창으로 이동하게
+                navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error"}, error:true});
               }
         };
 
@@ -279,7 +281,9 @@ function MainGame() {
                 socket.current.emit("shoot_bullet", {
                     x: cur.x + 30*Math.cos(cur.angle)-20*Math.sin(cur.angle), //캐릭터 총구로 보정 
                     y: cur.y +30*Math.sin(cur.angle)+20*Math.cos(cur.angle), // 캐릭터 총구로 보정
-                    angle:cur.angle
+                    angle:cur.angle,
+                    user : cur.id, // 누가 쐈는지 저장
+                    user_name : cur.nickname
                 })
                 num_bullet.current -= 1; 
                 bullet.current = null; 
@@ -302,14 +306,6 @@ function MainGame() {
             let bullet_cur = bullets.current[bulletId];
             bullet_cur.x += Math.cos(bullet_cur.angle)*bulletvelocity;
             bullet_cur.y += Math.sin(bullet_cur.angle)*bulletvelocity;
-            // context.fillStyle="#FFFFFF"
-            // context.beginPath();
-            // context.arc(
-            //     bullet1.x-cameraX, 
-            //     bullet1.y-cameraY, 
-            //     5, 0, 2*Math.PI
-            // );
-            // context.fill();
             
             context.save();
             context.translate(bullet_cur.x - cameraX, bullet_cur.y- cameraY);
@@ -383,8 +379,8 @@ function MainGame() {
         const cur = get_player.current[myId];
     
         for (let bulletId in bullets.current) {
-            const bullet1 = bullets.current[bulletId];
-            if (checkCollision(cur, bullet1)) {
+            const bullet_cur = bullets.current[bulletId];
+            if (checkCollision(cur, bullet_cur)) {
                 // 충돌 발생! 여기서 필요한 동작 수행
                 console.log('캐릭터와 총알이 충돌했습니다!');
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
@@ -392,12 +388,14 @@ function MainGame() {
 
                 // 그리고 충돌한 총알 제거 (bullets.current 배열에서 해당 총알 삭제)
                 delete bullets.current[bulletId];
-                socket.current.emit('collision', bullet1);
+                socket.current.emit('collision', bullet_cur);
+
+                if(cur.state <= 0){ // 사망 처리
+                    socket.current.emit("death", cur);
+                    // bullet_cur.user로 점수나 킬 올리기
+                    navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
+                }
             }
-        }
-        if(cur.state <= 0){ // 사망 처리
-            socket.current.emit("death", cur);
-            navigate('../Restart', {replace:true, state:{nickname : nickname}});
         }
     }
 
