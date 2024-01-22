@@ -8,6 +8,7 @@ function MainGame() {
     const {state} = useLocation();
     const nickname = state?.nickname;
     const [myId, setMyId] = useState(null);
+    const [hp_val, setHP] = useState(100);
     const canvasRef = useRef(null); // canvas 
 
     // 플레이어, 총알 위치 정보 -> 렌더링에 사용
@@ -92,6 +93,7 @@ function MainGame() {
                 player.y = data.y;
                 player.dx = data.dx;
                 player.dy = data.dy;
+                player.state = data.state;
             }
         });
 
@@ -251,7 +253,18 @@ function MainGame() {
         }
         context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
 
-        
+
+        // Health Point 그리기
+       const drawProgressBar = (x, y, val) =>{
+            const length = 60; 
+            context.fillStyle = '#ddd';
+            context.fillRect(x, y, length, 10);
+
+            // Draw the filled part of the progress bar
+            context.fillStyle = '#4CAF50';
+            context.fillRect(x, y, length * val/100, 10);
+       }
+
         // 다른 유저들 위치 표시
         for (let userId in get_player.current) {
             const user = get_player.current[userId];
@@ -266,10 +279,12 @@ function MainGame() {
             context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
             context.rotate(-angle);
             context.translate(-tx, -ty);
-            context.restore();       
+            context.restore();
+            
+            drawProgressBar(tx-30, ty-50, user.state);
         }
 
-         // 총알 그리기
+         // 총알 발사 처리
         if (bullet.current){
             if(num_bullet.current > 0){ // 총알이 남아 있으면
                 const angle = Math.atan2(
@@ -300,7 +315,9 @@ function MainGame() {
                 
             }
         }
-        //console.log(bullets.current);
+
+
+        // 총알 그리기 + 맵에서 나간 총알 삭제
         const filtered_bullets = {};
         for (let bulletId in bullets.current) {
             let bullet_cur = bullets.current[bulletId];
@@ -322,6 +339,15 @@ function MainGame() {
             }
         }
         bullets.current = filtered_bullets;
+
+
+        // 총알 충돌처리 
+        handleCollisions(cur);
+
+
+        // 남은 총알 수 표시하기
+
+        // 킬 수 표시하기
 
         // 현재 자기 자신 위치 업데이트
         if(pressDown.current){
@@ -355,9 +381,10 @@ function MainGame() {
 
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
-        handleCollisions()
     };
 
+
+    // 거리 계산
     function calculateDistance(x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -375,8 +402,8 @@ function MainGame() {
         return distance < collision_distance;
     }
 
-    function handleCollisions() {
-        const cur = get_player.current[myId];
+    function handleCollisions(cur) {
+        //const cur = get_player.current[myId];
     
         for (let bulletId in bullets.current) {
             const bullet_cur = bullets.current[bulletId];
@@ -400,8 +427,8 @@ function MainGame() {
     }
 
     return (
-    <div className='maingame'>
-        <canvas ref={(ref) => { canvasRef.current = ref; } } className='maingame_canvas'></canvas>
+    <div className='maingame' >
+        <canvas ref={(ref) => { canvasRef.current = ref; } } className='maingame_canvas'></canvas>   
     </div>
     );
 }
