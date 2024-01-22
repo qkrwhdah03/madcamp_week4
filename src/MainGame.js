@@ -61,7 +61,7 @@ function MainGame() {
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
 
-        const soc = io.connect("http://172.10.7.21:443", {transports:['websocket']});
+        const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
         // socket 연결 성공 시
         soc.on("connect", () => {
             console.log("Socket connected successfully!");
