@@ -189,7 +189,7 @@ function MainGame() {
                 console.log('현재 창이 비활성화되어 있습니다.');
                 // 비활성화 되면..? 어떻게 처리?
                 // 1.Navigate으로 connection이 끊긴 창으로 이동하게
-                navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error"}, error:true});
+                navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
         };
 
