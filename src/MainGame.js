@@ -231,10 +231,8 @@ function MainGame() {
         for (let userId in get_player.current) {
             const user = get_player.current[userId];
             // Draw the user at user.x, user.y (adjust as needed)
-            //context.fillStyle = user.color; // Set user color
-            //context.fillRect(user.x - cameraX, user.y - cameraY, 50, 50); // Example rectangle, adjust size as needed
-            const tx = user.x - cameraX ; // 77.4 이미지 크기임
-            const ty = user.y - cameraY ; // 66 이미지 크기임
+            const tx = user.x - cameraX ; 
+            const ty = user.y - cameraY ;
             const angle = Math.atan2(user.dy, user.dx);
             context.save();
             context.translate(tx, ty);
@@ -368,7 +366,7 @@ function MainGame() {
                 socket.current.emit('collision', bullet1);
             }
         }
-        if(cur.state < 0){ // 사망 처리
+        if(cur.state <= 0){ // 사망 처리
             socket.current.emit("death", cur);
             navigate('../Restart', {replace:true, state:{nickname : nickname}});
         }
