@@ -200,7 +200,7 @@ function MainGame() {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
-      }, [canvasRef, canvasRef.current, socket, socket.current, map, map.current]);
+      }, [canvasRef.current, socket.current, map.current]);
 
 
     const renderGame = () => {
@@ -241,8 +241,7 @@ function MainGame() {
             context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
             context.rotate(-angle);
             context.translate(-tx, -ty);
-            context.restore();
-            
+            context.restore();       
         }
 
          // 총알 그리기
@@ -328,10 +327,9 @@ function MainGame() {
 
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
-        
-
         handleCollisions()
     };
+
     function calculateDistance(x1, y1, x2, y2) {
         const dx = x2 - x1;
         const dy = y2 - y1;
@@ -359,7 +357,6 @@ function MainGame() {
                 console.log('캐릭터와 총알이 충돌했습니다!');
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
                 cur.state -= damage; // 체력 10 감소
-                console.log(cur.state);
 
                 // 그리고 충돌한 총알 제거 (bullets.current 배열에서 해당 총알 삭제)
                 delete bullets.current[bulletId];
