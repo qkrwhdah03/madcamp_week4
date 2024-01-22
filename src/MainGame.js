@@ -19,6 +19,7 @@ function MainGame() {
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
     const troop = useRef(null);
+    const troop2 = useRef(null);
     const bullet_img = useRef(null);
 
     // 서버 통신 소켓
@@ -29,6 +30,7 @@ function MainGame() {
     const pressUp  =  useRef(false);
     const pressLeft  =  useRef(false);
     const pressRight  =  useRef(false);
+    const pressReload = useRef(false);
 
     // 마우스 위치 좌표 넣기
     const mousepointerX = useRef(null);
@@ -36,7 +38,8 @@ function MainGame() {
 
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
-    const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로 
+    const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
+    const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
     const bullet_src = '/bullet.png';
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
@@ -94,6 +97,7 @@ function MainGame() {
                 player.dy = data.dy;
                 player.state = data.state;
                 player.kill = data.kill;
+                player.hit=data.hit;
             }
         });
 
@@ -137,6 +141,13 @@ function MainGame() {
             troop.current = user_image;
         }
 
+        const user_image2 = new Image();
+        user_image2.src = process.env.PUBLIC_URL + troop_src2;
+        user_image2.onload = ()=>{
+            console.log("Read user Image Done");
+            troop2.current = user_image2;
+        }
+
         // 총알 이미지 가져오기
         const bullet_image = new Image();
         bullet_image.src = process.env.PUBLIC_URL + bullet_src;
@@ -158,6 +169,12 @@ function MainGame() {
                     break;
                 case 's':
                     pressDown.current = true;
+                    break;
+                case 'r':
+                    if(!pressReload.current && num_bullet.current < total_bullet_num){
+                        pressReload.current = true;
+                        reload();
+                    };
                     break;
                 default:
                     break;
@@ -201,6 +218,12 @@ function MainGame() {
                 // 1.Navigate으로 connection이 끊긴 창으로 이동하게
                 navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
+        };
+        const reload = () => {
+            setTimeout(() => {
+                num_bullet.current = total_bullet_num;
+                pressReload.current = false;
+            }, reload_time);
         };
 
         window.addEventListener("keyup", handleKeyUp);
@@ -283,7 +306,12 @@ function MainGame() {
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
-            context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
+            if(user.hit){
+                context.drawImage(troop2.current, -troop.current.width / 2, -troop.current.height / 2);
+            }
+            else{
+                context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
+            }
             context.rotate(-angle);
             context.translate(-tx, -ty);
             context.restore();
@@ -390,7 +418,10 @@ function MainGame() {
         // 마우스 포인터 위치 계산
         cur.dy=mousepointerY.current-context.canvas.offsetTop-cur.y+cameraY;
         cur.dx=mousepointerX.current-context.canvas.offsetLeft-cur.x+cameraX;
-
+        if(cur.hit){
+            cur.hit-=1;
+        }
+        console.log(cur.hit);
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
@@ -424,6 +455,7 @@ function MainGame() {
                 console.log('캐릭터와 총알이 충돌했습니다!');
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
                 cur.state -= damage; // 체력 10 감소
+                cur.hit=10;
 
                 // 그리고 충돌한 총알 제거 (bullets.current 배열에서 해당 총알 삭제)
                 delete bullets.current[bulletId];
