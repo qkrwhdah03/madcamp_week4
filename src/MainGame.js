@@ -26,6 +26,9 @@ function MainGame() {
     // 서버 통신 소켓
     const socket = useRef(null);
 
+    // 소리 재생을 위한 상호작용 변수 선언
+    const [interact, setInteract] = useState(false);
+
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
@@ -184,6 +187,7 @@ function MainGame() {
         }
 
         const handleKeyDown = (e)=>{
+            setInteract(true);
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = true; 
@@ -209,6 +213,7 @@ function MainGame() {
         }
 
         const handleKeyUp = (e)=>{
+            setInteract(true);
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = false; 
@@ -227,6 +232,7 @@ function MainGame() {
               }
         }
         const handleCanvasClick = (e) => {
+            setInteract(true);
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
             if(num_bullet.current>0){
@@ -237,6 +243,7 @@ function MainGame() {
         };
 
         const handleMouseMove = (e) => {
+            setInteract(true);
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
         };
@@ -286,7 +293,7 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && troop.current && troop2.current && wall.current) {
+        if (canvasRef.current && socket.current && map.current && troop.current && troop2.current && wall.current && myId) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -296,7 +303,9 @@ function MainGame() {
             }, rendering_interval);
 
             const intervalId1 = setInterval(() => {
-                updatesound();
+                if(interact){
+                    updatesound();
+                }
             }, 500);
 
             return () => {
@@ -304,7 +313,7 @@ function MainGame() {
                 clearInterval(intervalId1);
             };
         }
-      }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current]);
+      }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current, myId]);
 
     const updatesound = () =>{
         let closestdistance=100000000000;
@@ -333,6 +342,7 @@ function MainGame() {
             heartbeat_src.play();
         }
     }
+
     const renderGame = () => {
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
