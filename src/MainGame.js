@@ -13,7 +13,7 @@ function MainGame() {
     // 플레이어, 총알 위치 정보 -> 렌더링에 사용
     const get_player = useRef({});
     const bullets = useRef({});
-    const bullet = useRef();
+    const bullet = useRef(null);
 
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
@@ -264,7 +264,7 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && wall.current) {
+        if (canvasRef.current && socket.current && map.current && wall.current && troop.current && troop2.current) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -277,7 +277,7 @@ function MainGame() {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
-      }, [canvasRef.current, socket.current, map.current, wall.current]);
+      }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current]);
 
 
     const renderGame = () => {
@@ -447,6 +447,24 @@ function MainGame() {
                 cur.x -= velocity;
             }
             //console.log(wall.current[p][q]);
+        }
+
+        // 지하 순간이동 처리
+        const p = Math.floor(cur.x/tile_size);
+        const q = Math.floor(cur.y/tile_size);
+        if(q === 41 && p === 29){
+            cur.x = 33 * tile_size;
+        }
+        if(q === 41 && p === 32){
+            cur.x = 28 * tile_size;
+        }
+        if(q === 58 && p === 58){
+            cur.x = 2 * tile_size;
+            cur.y = 3 * tile_size;
+        }
+        if(q <=2 && p <=2 ){
+            cur.x = 57 * tile_size;
+            cur.y = 57 * tile_size;
         }
 
         // 마우스 포인터 위치 계산
