@@ -52,13 +52,13 @@ function MainGame() {
     const pistol_src = new Audio('sounds/pistol.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
-    const reload_time = 1000 // 재장전 시간 (ms)
-    const rendering_interval = 20 // 렌더링 주기 (ms)
-    const search_distance = 20//벽 존재 탐색 거리
+    const reload_time = 1000; // 재장전 시간 (ms)
+    const rendering_interval = 20; // 렌더링 주기 (ms)
+    const search_distance = 20;//벽 존재 탐색 거리
     const canvas_w = 1024; // 캔버스 크기
     const canvas_h = 768; // 캔버스 크기
-    const map_x = 1920  //dw 전체 맵 크기 
-    const map_y = 1920 // 전체 맵 크기
+    const map_x = 1920 ; //dw 전체 맵 크기 
+    const map_y = 1920 ;// 전체 맵 크기
     const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
     const collision_distance = 20; // 총알 충돌 거리 설정
@@ -72,6 +72,53 @@ function MainGame() {
 
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
+        
+        // 배경 map 읽어오기
+        const image = new Image();
+        image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
+        image.onload = () =>{
+            console.log("Read Image Done");
+            map.current = image;
+        }
+
+        // map에서 wall 정보 읽어오기
+        let src = process.env.PUBLIC_URL + wall_src;
+        fetch(src)
+        .then(response => {
+            if (!response.ok) {
+            throw new Error('Fail to fetch map wall data');
+            }
+            return response.json();
+        })
+        .then(jsonData => {
+            wall.current = jsonData['wall_tile_coordinate']; // wall 변수에 저장 : 60 by 60 array
+        })
+        .catch(error => {
+            console.error('Error while fetching or parsing JSON file:', error);
+        });
+
+        // User 캐릭터 가져오기
+        const user_image = new Image();
+        user_image.src = process.env.PUBLIC_URL + troop_src;
+        user_image.onload = ()=>{
+            console.log("Read user Image Done");
+            troop.current = user_image;
+        }
+
+        const user_image2 = new Image();
+        user_image2.src = process.env.PUBLIC_URL + troop_src2;
+        user_image2.onload = ()=>{
+            console.log("Read user Image Done");
+            troop2.current = user_image2;
+        }
+
+        // 총알 이미지 가져오기
+        const bullet_image = new Image();
+        bullet_image.src = process.env.PUBLIC_URL + bullet_src;
+        bullet_image.onload = ()=>{
+            console.log("Read bullet Image Done");
+            bullet_img.current = bullet_image;
+        }
 
         const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
 
@@ -133,54 +180,7 @@ function MainGame() {
             if(player){
                 player.kill += 1;
             }
-        })
-        
-        // 배경 map 읽어오기
-        const image = new Image();
-        image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
-        image.onload = () =>{
-            console.log("Read Image Done");
-            map.current = image;
-        }
-
-        // map에서 wall 정보 읽어오기
-        let src = process.env.PUBLIC_URL + wall_src;
-        fetch(src)
-        .then(response => {
-            if (!response.ok) {
-            throw new Error('Fail to fetch map wall data');
-            }
-            return response.json();
-        })
-        .then(jsonData => {
-            wall.current = jsonData['wall_tile_coordinate']; // wall 변수에 저장 : 60 by 60 array
-        })
-        .catch(error => {
-            console.error('Error while fetching or parsing JSON file:', error);
         });
-
-        // User 캐릭터 가져오기
-        const user_image = new Image();
-        user_image.src = process.env.PUBLIC_URL + troop_src;
-        user_image.onload = ()=>{
-            console.log("Read user Image Done");
-            troop.current = user_image;
-        }
-
-        const user_image2 = new Image();
-        user_image2.src = process.env.PUBLIC_URL + troop_src2;
-        user_image2.onload = ()=>{
-            console.log("Read user Image Done");
-            troop2.current = user_image2;
-        }
-
-        // 총알 이미지 가져오기
-        const bullet_image = new Image();
-        bullet_image.src = process.env.PUBLIC_URL + bullet_src;
-        bullet_image.onload = ()=>{
-            console.log("Read bullet Image Done");
-            bullet_img.current = bullet_image;
-        }
 
         const handleKeyDown = (e)=>{
             setInteract(true);
