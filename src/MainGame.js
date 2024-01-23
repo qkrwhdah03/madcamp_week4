@@ -27,7 +27,8 @@ function MainGame() {
     const socket = useRef(null);
 
     // 소리 재생을 위한 상호작용 변수 선언
-    const interact = useRef(false);
+    const [interact, setinteract] = useState(false);
+    const soundplay = useRef(false);
 
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
@@ -40,7 +41,7 @@ function MainGame() {
     const mousepointerX = useRef(null);
     const mousepointerY = useRef(null);
 
-
+    
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
     const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
@@ -72,6 +73,8 @@ function MainGame() {
 
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
+        setinteract(false);
+        console.log('인터렉트', interact);
         
         // 배경 map 읽어오기
         const image = new Image();
@@ -184,7 +187,6 @@ function MainGame() {
         });
 
         const handleKeyDown = (e)=>{
-            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = true; 
@@ -210,7 +212,6 @@ function MainGame() {
         }
 
         const handleKeyUp = (e)=>{
-            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = false; 
@@ -229,7 +230,8 @@ function MainGame() {
               }
         }
         const handleCanvasClick = (e) => {
-            interact.current = true;
+            setinteract(true);
+            console.log('클릭했어요', interact);
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
             if(num_bullet.current>0){
@@ -239,7 +241,6 @@ function MainGame() {
         };
 
         const handleMouseMove = (e) => {
-            interact.current = true;
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
         };
@@ -263,10 +264,11 @@ function MainGame() {
         window.addEventListener("mousemove", handleMouseMove);
         document.addEventListener('visibilitychange', handleVisibilityChange); 
 
-        heartbeat_src.addEventListener('ended', function() {
-            heartbeat_src.currentTime = 0; 
-            heartbeat_src.play();
-        }, false);
+        // heartbeat_src.addEventListener('ended', function() {
+        //     console.log('끝낫습니다');
+        //     heartbeat_src.currentTime = 0; 
+        //     heartbeat_src.play();
+        // }, false);
 
         return () => {
             soc.disconnect();
@@ -302,24 +304,30 @@ function MainGame() {
                 renderGame();
             }, rendering_interval);
 
+            const intervalId1 = setInterval(() => {
+                updatesound();
+                console.log(heartbeat_src.paused);
+             }, 500);
+            
+
             return () => {
-                clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
+                clearInterval(intervalId);
+                clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
       }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current, myId]);
 
+
     useEffect(()=>{
-        if(interact.current){
-            const intervalId = setInterval(() => {
-               updatesound();
-            }, 500);
-            return () => {
-                clearInterval(intervalId);
-            };
+        if(interact){
+            console.log('1');
+            heartbeat_src.play();
+            soundplay.current=true;
         }
-    }, [interact.current]);
+    },[interact]);
 
     const updatesound = () =>{
+        
         let closestdistance=100000000000;
         // 다른 유저들 위치 표시
         for (let userId in get_player.current) {
@@ -330,18 +338,22 @@ function MainGame() {
             };
     
         }
-        heartbeat_src.pause();
-        if(closestdistance<200){
-            heartbeat_src.playbackRate=2.;
-            heartbeat_src.play();
-        }
-        else if(closestdistance<400){
-            heartbeat_src.playbackRate=1.5;
-            heartbeat_src.play();
-        }
-        else {
-            heartbeat_src.playbackRate=1;
-            heartbeat_src.play();
+
+        if(!heartbeat_src.paused || soundplay.current){
+            heartbeat_src.pause();
+            console.log('돌아갑니다');
+            if(closestdistance<250){
+                heartbeat_src.playbackRate=3;
+                heartbeat_src.play();
+            }
+            else if(closestdistance<500){
+                heartbeat_src.playbackRate=2;
+                heartbeat_src.play();
+            }
+            else {
+                heartbeat_src.playbackRate=1;
+                heartbeat_src.play();
+            }
         }
     }
 
@@ -369,7 +381,9 @@ function MainGame() {
         } else if(cameraY + canvas.height > mapSizeY){
             cameraY = mapSizeY - canvas.height;
         }
-        
+        context.globalAlpha = 0.5;
+        context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        context.globalAlpha = 1;
 
         context.save();
         context.beginPath();
@@ -651,7 +665,7 @@ function MainGame() {
                     socket.current.emit("death", cur, bullet_cur);
                     // bullet_cur.user로 점수나 킬 올리기
                     heartbeat_src.pause();
-                    navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
+                    navigate('../Restart', {replace:false, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
                 }
             }
         }
