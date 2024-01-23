@@ -232,7 +232,7 @@ function MainGame() {
             interact.current = true;
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
-            if(num_bullet.current>0){
+            if(num_bullet.current>0 && interact.current){
                 pistol_src.currentTime=0;
                 pistol_src.play();
             }
@@ -284,7 +284,9 @@ function MainGame() {
 
     const reload = () => {
         reolad_src.currentTime=0;
-        reolad_src.play();
+        if(interact.current){
+            reolad_src.play();
+        }
         setTimeout(() => {
             num_bullet.current = total_bullet_num;
             pressReload.current = false;
@@ -369,7 +371,10 @@ function MainGame() {
         } else if(cameraY + canvas.height > mapSizeY){
             cameraY = mapSizeY - canvas.height;
         }
-        
+
+        context.globalAlpha = 0.9;
+        context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        context.globalAlpha = 1.0;
 
         context.save();
         context.beginPath();
