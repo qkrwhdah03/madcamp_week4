@@ -21,6 +21,8 @@ function MainGame() {
     const troop2 = useRef(null);
     const bullet_img = useRef(null);
 
+    const wall = useRef(null); //##########################################(1)
+
     // 서버 통신 소켓
     const socket = useRef(null);
 
@@ -39,6 +41,7 @@ function MainGame() {
     const map_src = '/map.png'; // 배경맵 경로
     const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
     const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
+    const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
@@ -46,11 +49,12 @@ function MainGame() {
     const rendering_interval = 20 // 렌더링 주기 (ms)
     const canvas_w = 1024; // 캔버스 크기
     const canvas_h = 768; // 캔버스 크기
-    const map_x = 1600  // 전체 맵 크기 
-    const map_y = 1600 // 전체 맵 크기
+    const map_x = 1920  // 전체 맵 크기 
+    const map_y = 1920 // 전체 맵 크기
     const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
     const collision_distance = 20; // 총알 충돌 거리 설정
+    const tile_size = 32; // Tiled tile하나 크기 32 px
 
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
@@ -108,7 +112,7 @@ function MainGame() {
 
         soc.on("bullets", (data)=>{
             bullets.current[data.bulletId]=data;
-            console.log('총알들', bullets.current);
+            //console.log('총알들', bullets.current);
         });
 
         soc.on('deletebullet', (data)=>{
@@ -131,6 +135,23 @@ function MainGame() {
             console.log("Read Image Done");
             map.current = image;
         }
+
+        // map에서 wall 정보 읽어오기
+        let src = process.env.PUBLIC_URL + wall_src;
+        fetch(src)
+        .then(response => {
+            if (!response.ok) {
+            throw new Error('Fail to fetch map wall data');
+            }
+            return response.json();
+        })
+        .then(jsonData => {
+            wall.current = jsonData['wall_tile_coordinate']; // wall 변수에 저장 : 60 by 60 array
+            console.log(wall.current);
+        })
+        .catch(error => {
+            console.error('Error while fetching or parsing JSON file:', error);
+        });
 
         // User 캐릭터 가져오기
         const user_image = new Image();
@@ -243,11 +264,10 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current) {
+        if (canvasRef.current && socket.current && map.current && wall.current) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
-
             // 1000ms마다 renderGame 호출
             const intervalId = setInterval(() => {
                 renderGame();
@@ -257,7 +277,7 @@ function MainGame() {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
-      }, [canvasRef.current, socket.current, map.current]);
+      }, [canvasRef.current, socket.current, map.current, wall.current]);
 
 
     const renderGame = () => {
@@ -353,7 +373,6 @@ function MainGame() {
             }
         }
 
-
         // 총알 그리기 + 맵에서 나간 총알 삭제
         const filtered_bullets = {};
         for (let bulletId in bullets.current) {
@@ -369,7 +388,10 @@ function MainGame() {
             context.translate(-bullet_cur.x + cameraX, bullet_cur.y + cameraY);
             context.restore(); 
 
-            if(bullet_cur.x < 0 || bullet_cur.y < 0 || bullet_cur.x > mapsizeX || bullet_cur.y > mapSizeY){
+            // 벽 충돌하면 제거
+            const p = Math.floor(bullet_cur.x / tile_size);
+            const q = Math.floor(bullet_cur.y / tile_size);
+            if(wall.current[q][p] === 1){
                 continue;
             } else{
                 filtered_bullets[bullet_cur.bulletId] = bullet_cur;
@@ -389,29 +411,42 @@ function MainGame() {
 
 
         // 현재 자기 자신 위치 업데이트
+        
         if(pressDown.current){
             cur.y += velocity;
-            if(cur.y > mapSizeY- 30){ // 50은 user size
+            const p = Math.floor(cur.x/tile_size);
+            const q = Math.floor(cur.y/tile_size);
+            if(wall.current[q][p] === 1){
                 cur.y -= velocity;
             }
+            //console.log(wall.current[p][q]);
         }
         if(pressUp.current){
             cur.y -= velocity;
-            if(cur.y < 30){
+            const p = Math.floor(cur.x/tile_size);
+            const q = Math.floor(cur.y/tile_size);
+            if(wall.current[q][p] === 1){
                 cur.y += velocity;
             }
+            //console.log(wall.current[q][p]);
         }
         if(pressLeft.current){
             cur.x -= velocity;
-            if(cur.x < 30){
+            const p = Math.floor(cur.x/tile_size);
+            const q = Math.floor(cur.y/tile_size);
+            if(wall.current[q][p] === 1){
                 cur.x += velocity;
             }
+            //console.log(wall.current[p][q]);
         }
         if(pressRight.current){
             cur.x += velocity;
-            if(cur.x > mapsizeX - 50){ // 50은 user size
+            const p = Math.floor(cur.x/tile_size);
+            const q = Math.floor(cur.y/tile_size);
+            if(wall.current[q][p] === 1){
                 cur.x -= velocity;
             }
+            //console.log(wall.current[p][q]);
         }
 
         // 마우스 포인터 위치 계산
@@ -424,7 +459,6 @@ function MainGame() {
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
-
 
     // 거리 계산
     function calculateDistance(x1, y1, x2, y2) {
