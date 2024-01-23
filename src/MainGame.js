@@ -343,6 +343,9 @@ function MainGame() {
         let cur = get_player.current[myId];
         context.clearRect(0, 0, canvas.width, canvas.height);
 
+        const lightAngle = Math.PI / 2; // 45도 부채꼴 모양으로 밝힘
+        const lightDistance = 1000; // 밝힐 최대 거리
+        const mouseangle = Math.atan2(cur.dy, cur.dx);
         // 맵 그리기, 카메라 설정
         let mapsizeX = map_x;
         let mapSizeY = map_y;
@@ -358,7 +361,31 @@ function MainGame() {
         } else if(cameraY + canvas.height > mapSizeY){
             cameraY = mapSizeY - canvas.height;
         }
-        context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        
+
+        context.save();
+        context.beginPath();
+        context.moveTo(cur.x - cameraX, cur.y - cameraY);
+        context.arc(cur.x - cameraX, cur.y - cameraY, lightDistance, mouseangle - lightAngle / 2, mouseangle + lightAngle / 2);
+        context.lineTo(cur.x - cameraX, cur.y - cameraY);
+        context.closePath();
+        context.clip();
+
+        const brightMapCanvas = document.createElement('canvas');
+        brightMapCanvas.width = canvas.width;
+        brightMapCanvas.height = canvas.height;
+        const brightMapContext = brightMapCanvas.getContext('2d');
+
+        // 부채꼴 모양으로 밝기 조절
+        brightMapContext.globalAlpha = 1; // 밝기 조절 정도 (0.5는 반투명)
+        brightMapContext.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+
+        // 나머지 맵 어둡게 처리
+        context.globalCompositeOperation = 'destination-atop';
+        context.drawImage(brightMapCanvas, 0, 0);
+        context.globalCompositeOperation = 'source-over';
+
+        context.restore();
 
 
         // Health Point 그리기
@@ -406,14 +433,8 @@ function MainGame() {
                     if(wall.current[q][p] === 1){
                         iswall = 1;
                     }
-
-                    
-
                 };
-                
 
-
-            
                 // 명도 낮춤 효과
                 if (!isWithin45Degrees || iswall) {
                     context.globalAlpha = 0; // 투명도 설정 (0.5: 반투명)
@@ -489,6 +510,7 @@ function MainGame() {
             bullet_cur.y += Math.sin(bullet_cur.angle)*bulletvelocity;
             
             context.save();
+
             context.translate(bullet_cur.x - cameraX, bullet_cur.y- cameraY);
             context.rotate(bullet_cur.angle);
             context.drawImage(bullet_img.current, -bullet_img.current.width / 2, -bullet_img.current.height / 2);
