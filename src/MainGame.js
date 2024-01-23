@@ -37,12 +37,16 @@ function MainGame() {
     const mousepointerX = useRef(null);
     const mousepointerY = useRef(null);
 
+
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
     const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
     const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
+    const reolad_src = new Audio('/sounds/reload.mp3');
+    const heartbeat_src = new Audio('sounds/heartbeat.mp3');
+    const pistol_src = new Audio('sounds/pistol.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
     const reload_time = 1000 // 재장전 시간 (ms)
@@ -66,11 +70,13 @@ function MainGame() {
         get_player.current = {};
 
         const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
+
         // socket 연결 성공 시
         soc.on("connect", () => {
             console.log("Socket connected successfully!");
             soc.emit('username',nickname);
             socket.current = soc;
+            heartbeat_src.currentTime=0;
         });
 
         // socket 연결 실패 시
@@ -113,6 +119,7 @@ function MainGame() {
         soc.on("bullets", (data)=>{
             bullets.current[data.bulletId]=data;
             //console.log('총알들', bullets.current);
+
         });
 
         soc.on('deletebullet', (data)=>{
@@ -222,6 +229,11 @@ function MainGame() {
         const handleCanvasClick = (e) => {
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
+            if(num_bullet.current>0){
+                pistol_src.pause();
+                pistol_src.currentTime=0;
+                pistol_src.play();
+            }
         };
 
         const handleMouseMove = (e) => {
@@ -236,21 +248,22 @@ function MainGame() {
                 console.log('현재 창이 비활성화되어 있습니다.');
                 // 비활성화 되면..? 어떻게 처리?
                 // 1.Navigate으로 connection이 끊긴 창으로 이동하게
+                heartbeat_src.pause();
                 navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
         };
-        const reload = () => {
-            setTimeout(() => {
-                num_bullet.current = total_bullet_num;
-                pressReload.current = false;
-            }, reload_time);
-        };
+        
 
         window.addEventListener("keyup", handleKeyUp);
         window.addEventListener("keydown", handleKeyDown);
         window.addEventListener("click", handleCanvasClick);
         window.addEventListener("mousemove", handleMouseMove);
         document.addEventListener('visibilitychange', handleVisibilityChange); 
+
+        heartbeat_src.addEventListener('ended', function() {
+            heartbeat_src.currentTime = 0; 
+            heartbeat_src.play();
+        }, false);
 
         return () => {
             soc.disconnect();
@@ -262,9 +275,18 @@ function MainGame() {
         };
     }, []);
 
+    const reload = () => {
+        reolad_src.currentTime=0;
+        reolad_src.play();
+        setTimeout(() => {
+            num_bullet.current = total_bullet_num;
+            pressReload.current = false;
+        }, reload_time);
+    };
+
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && wall.current) {
+        if (canvasRef.current && socket.current && map.current && troop.current && troop2.current && wall.current) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -273,13 +295,44 @@ function MainGame() {
                 renderGame();
             }, rendering_interval);
 
+            const intervalId1 = setInterval(() => {
+                updatesound();
+            }, 500);
+
             return () => {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
+                clearInterval(intervalId1);
             };
         }
-      }, [canvasRef.current, socket.current, map.current, wall.current]);
+      }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current]);
 
-
+    const updatesound = () =>{
+        let closestdistance=100000000000;
+        // 다른 유저들 위치 표시
+        for (let userId in get_player.current) {
+            const user = get_player.current[userId];
+            const distance = calculateDistance(user.x, user.y, get_player.current[myId].x, get_player.current[myId].y);
+            if (userId!=myId && closestdistance>distance){
+                closestdistance=distance;
+            };
+    
+            console.log(closestdistance);
+            //console.log(closestdistance);
+        }
+        heartbeat_src.pause();
+        if(closestdistance<200){
+            heartbeat_src.playbackRate=2.;
+            heartbeat_src.play();
+        }
+        else if(closestdistance<400){
+            heartbeat_src.playbackRate=1.5;
+            heartbeat_src.play();
+        }
+        else {
+            heartbeat_src.playbackRate=1;
+            heartbeat_src.play();
+        }
+    }
     const renderGame = () => {
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
@@ -313,7 +366,6 @@ function MainGame() {
             context.fillStyle = color;
             context.fillRect(x, y, length * val/max, height);
        }
-
         // 다른 유저들 위치 표시
         for (let userId in get_player.current) {
             const user = get_player.current[userId];
@@ -341,6 +393,8 @@ function MainGame() {
             }
         }
 
+        
+
          // 총알 발사 처리
         if (bullet.current){
             if(num_bullet.current > 0){ // 총알이 남아 있으면
@@ -361,12 +415,15 @@ function MainGame() {
                 bullet.current = null; 
             }
             else {
+                if(reload_frame_number.current===reload_time / rendering_interval){
+                    reload();
+                }
                 // 재장전
                 if(reload_frame_number.current > 0){
                     reload_frame_number.current -= 1;
                 } else{
+                    
                     reload_frame_number.current = reload_time / rendering_interval;
-                    num_bullet.current = total_bullet_num;
                     bullet.current = null; 
                 }
                 
@@ -455,7 +512,7 @@ function MainGame() {
         if(cur.hit){
             cur.hit-=1;
         }
-        console.log(cur.hit);
+        //console.log(cur.hit);
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
@@ -497,6 +554,7 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, bullet_cur);
                     // bullet_cur.user로 점수나 킬 올리기
+                    heartbeat_src.pause();
                     navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
                 }
             }
