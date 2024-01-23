@@ -54,9 +54,10 @@ function MainGame() {
     const bulletvelocity = 20; // 총알 속또
     const reload_time = 1000 // 재장전 시간 (ms)
     const rendering_interval = 20 // 렌더링 주기 (ms)
+    const search_distance = 20//벽 존재 탐색 거리
     const canvas_w = 1024; // 캔버스 크기
     const canvas_h = 768; // 캔버스 크기
-    const map_x = 1920  // 전체 맵 크기 
+    const map_x = 1920  //dw 전체 맵 크기 
     const map_y = 1920 // 전체 맵 크기
     const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
@@ -114,24 +115,20 @@ function MainGame() {
         });
 
         soc.on("leave_user", (id)=>{
-            //users.log = users.current.filter(user => user.id !== id);
             delete get_player.current[id];
         });
 
 
         soc.on("bullets", (data)=>{
             bullets.current[data.bulletId]=data;
-            //console.log('총알들', bullets.current);
 
         });
 
         soc.on('deletebullet', (data)=>{
             delete bullets.current[data.bulletId];
-            console.log('총알 맞앗어요');
         });
 
         soc.on('killed', (user_id)=>{
-            console.log("killed");
             const player = get_player.current[user_id];
             if(player){
                 player.kill += 1;
@@ -157,7 +154,6 @@ function MainGame() {
         })
         .then(jsonData => {
             wall.current = jsonData['wall_tile_coordinate']; // wall 변수에 저장 : 60 by 60 array
-            console.log(wall.current);
         })
         .catch(error => {
             console.error('Error while fetching or parsing JSON file:', error);
@@ -321,12 +317,10 @@ function MainGame() {
         for (let userId in get_player.current) {
             const user = get_player.current[userId];
             const distance = calculateDistance(user.x, user.y, get_player.current[myId].x, get_player.current[myId].y);
-            if (userId!=myId && closestdistance>distance){
+            if (userId!==myId && closestdistance>distance){
                 closestdistance=distance;
             };
     
-            console.log(closestdistance);
-            //console.log(closestdistance);
         }
         heartbeat_src.pause();
         if(closestdistance<200){
@@ -384,9 +378,61 @@ function MainGame() {
             const ty = user.y - cameraY ;
             const angle = Math.atan2(user.dy, user.dx);
             context.save();
+            if (userId !== myId){
+                const mdifx = mousepointerX.current-context.canvas.offsetLeft-cur.x+cameraX;
+                const mdify = mousepointerY.current-context.canvas.offsetTop-cur.y+cameraY;
+                const edifx = user.x - cur.x;
+                const edify = user.y - cur.y;
+                const mdif = Math.sqrt(mdifx**2 + mdify**2);
+                const edif = Math.sqrt(edifx**2 + edify**2);
+                const inner = (mdifx*edifx+mdify*edify)/(mdif*edif);
+                const innerangle = Math.acos(inner);
+                const isWithin45Degrees = innerangle < Math.PI / 4;
+
+                let iswall = 0;
+                const enemyangle = Math.acos(edifx/edif);
+                let sign=1;
+                if(edify<0)sign=-1;
+                const plusx = search_distance*Math.cos(enemyangle);
+                const plusy = search_distance*Math.sin(enemyangle)*sign;
+                let x=cur.x;
+                let y=cur.y;
+                const n = Math.floor(edif/search_distance);
+                for (let i=1; i<=n; i++){
+                    x+=plusx;
+                    y+=plusy;
+                    const p = Math.floor(x/tile_size);
+                    const q = Math.floor(y/tile_size);
+                    if(wall.current[q][p] === 1){
+                        iswall = 1;
+                    }
+
+                    
+
+                };
+                
+
+
+            
+                // 명도 낮춤 효과
+                if (!isWithin45Degrees || iswall) {
+                    context.globalAlpha = 0; // 투명도 설정 (0.5: 반투명)
+                }
+                else{
+                    context.globalAlpha = 1;
+                    drawProgressBar(tx-30, ty-50, user.state, 100,'#4CAF50', 60 ,6);
+                    
+                }
+            } 
+            else {
+                drawProgressBar(tx-30, ty-50, user.state, 100,'#4CAF50', 60 ,6);
+                drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2);
+            }
+
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
+
             if(user.hit){
                 context.drawImage(troop2.current, -troop.current.width / 2, -troop.current.height / 2);
             }
@@ -396,11 +442,6 @@ function MainGame() {
             context.rotate(-angle);
             context.translate(-tx, -ty);
             context.restore();
-            
-            drawProgressBar(tx-30, ty-50, user.state, 100,'#4CAF50', 60 ,6);
-            if (userId === myId){ // 총알 표시
-                drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2)
-            }
         }
 
         
@@ -413,7 +454,7 @@ function MainGame() {
                     bullet.current[0]-context.canvas.offsetLeft-cur.x+cameraX
                 )
                 cur.angle = angle;
-                //console.log('총알 각도',angle);
+            
                 socket.current.emit("shoot_bullet", {
                     x: cur.x + 30*Math.cos(cur.angle)-20*Math.sin(cur.angle), //캐릭터 총구로 보정 
                     y: cur.y +30*Math.sin(cur.angle)+20*Math.cos(cur.angle), // 캐릭터 총구로 보정
@@ -486,7 +527,7 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.y -= velocity;
             }
-            //console.log(wall.current[p][q]);
+          
         }
         if(pressUp.current){
             cur.y -= velocity;
@@ -495,7 +536,7 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.y += velocity;
             }
-            //console.log(wall.current[q][p]);
+       
         }
         if(pressLeft.current){
             cur.x -= velocity;
@@ -504,7 +545,7 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.x += velocity;
             }
-            //console.log(wall.current[p][q]);
+      
         }
         if(pressRight.current){
             cur.x += velocity;
@@ -513,7 +554,7 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.x -= velocity;
             }
-            //console.log(wall.current[p][q]);
+       
         }
 
         // 지하 순간이동 처리
@@ -540,7 +581,7 @@ function MainGame() {
         if(cur.hit){
             cur.hit-=1;
         }
-        //console.log(cur.hit);
+
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
@@ -569,8 +610,7 @@ function MainGame() {
         for (let bulletId in bullets.current) {
             const bullet_cur = bullets.current[bulletId];
             if (checkCollision(cur, bullet_cur)) {
-                // 충돌 발생! 여기서 필요한 동작 수행
-                console.log('캐릭터와 총알이 충돌했습니다!');
+                // 충돌 발생! 여기서 필요한 동작 수
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
                 cur.state -= damage; // 체력 10 감소
                 cur.hit=10;
