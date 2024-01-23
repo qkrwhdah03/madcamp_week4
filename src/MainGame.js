@@ -47,9 +47,9 @@ function MainGame() {
     const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
-    const reolad_src = new Audio('/sounds/reload.mp3');
-    const heartbeat_src = new Audio('sounds/heartbeat.mp3');
-    const pistol_src = new Audio('sounds/pistol.mp3');
+    const reolad_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
+    const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
+    const pistol_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
     const reload_time = 1000; // 재장전 시간 (ms)
@@ -233,7 +233,6 @@ function MainGame() {
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
             if(num_bullet.current>0){
-                pistol_src.pause();
                 pistol_src.currentTime=0;
                 pistol_src.play();
             }
@@ -276,6 +275,10 @@ function MainGame() {
             window.removeEventListener("click", handleCanvasClick);
             window.removeEventListener("mousemove", handleMouseMove);
             document.removeEventListener('visibilitychange', handleVisibilityChange); 
+
+            reolad_src.pause();
+            heartbeat_src.pause();
+            pistol_src.pause();
         };
     }, []);
 
@@ -411,14 +414,8 @@ function MainGame() {
                     if(wall.current[q][p] === 1){
                         iswall = 1;
                     }
-
-                    
-
                 };
                 
-
-
-            
                 // 명도 낮춤 효과
                 if (!isWithin45Degrees || iswall) {
                     context.globalAlpha = 0; // 투명도 설정 (0.5: 반투명)
@@ -559,7 +556,6 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.x -= velocity;
             }
-       
         }
 
         // 지하 순간이동 처리
