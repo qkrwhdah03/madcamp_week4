@@ -27,7 +27,7 @@ function MainGame() {
     const socket = useRef(null);
 
     // 소리 재생을 위한 상호작용 변수 선언
-    const [interact, setInteract] = useState(false);
+    const interact = useRef(false);
 
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
@@ -47,18 +47,18 @@ function MainGame() {
     const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
-    const reolad_src = new Audio('/sounds/reload.mp3');
-    const heartbeat_src = new Audio('sounds/heartbeat.mp3');
-    const pistol_src = new Audio('sounds/pistol.mp3');
+    const reolad_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
+    const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
+    const pistol_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
-    const reload_time = 1000 // 재장전 시간 (ms)
-    const rendering_interval = 20 // 렌더링 주기 (ms)
-    const search_distance = 20//벽 존재 탐색 거리
+    const reload_time = 1000; // 재장전 시간 (ms)
+    const rendering_interval = 20; // 렌더링 주기 (ms)
+    const search_distance = 20;//벽 존재 탐색 거리
     const canvas_w = 1024; // 캔버스 크기
     const canvas_h = 768; // 캔버스 크기
-    const map_x = 1920  //dw 전체 맵 크기 
-    const map_y = 1920 // 전체 맵 크기
+    const map_x = 1920 ; //dw 전체 맵 크기 
+    const map_y = 1920 ;// 전체 맵 크기
     const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
     const collision_distance = 20; // 총알 충돌 거리 설정
@@ -72,68 +72,6 @@ function MainGame() {
 
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
-
-        const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
-
-        // socket 연결 성공 시
-        soc.on("connect", () => {
-            console.log("Socket connected successfully!");
-            soc.emit('username',nickname);
-            socket.current = soc;
-            heartbeat_src.currentTime=0;
-        });
-
-        // socket 연결 실패 시
-        soc.on("connect_error", (error) => {
-            console.error("Socket connection error:", error.message);
-          });
-
-        // 본인 user_id 얻어오기
-        soc.on("user_id", (socket_id)=>{
-            setMyId(socket_id);
-        });
-
-        // 전체 플레이어 정보 얻기
-        soc.on("join_user", (player)=>{
-            // 여기서 users 배열에 player 추가하고
-            // get_player에 player.id 와 player을 mapping
-            //users.current.push(player);
-            get_player.current[player.id] = player;
-        });
-
-        soc.on("update_state",(data)=>{
-            const player = get_player.current[data.id];
-            if(player){
-                player.x = data.x;
-                player.y = data.y;
-                player.dx = data.dx;
-                player.dy = data.dy;
-                player.state = data.state;
-                player.kill = data.kill;
-                player.hit=data.hit;
-            }
-        });
-
-        soc.on("leave_user", (id)=>{
-            delete get_player.current[id];
-        });
-
-
-        soc.on("bullets", (data)=>{
-            bullets.current[data.bulletId]=data;
-
-        });
-
-        soc.on('deletebullet', (data)=>{
-            delete bullets.current[data.bulletId];
-        });
-
-        soc.on('killed', (user_id)=>{
-            const player = get_player.current[user_id];
-            if(player){
-                player.kill += 1;
-            }
-        })
         
         // 배경 map 읽어오기
         const image = new Image();
@@ -182,8 +120,71 @@ function MainGame() {
             bullet_img.current = bullet_image;
         }
 
+        const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
+
+        // socket 연결 성공 시
+        soc.on("connect", () => {
+            console.log("Socket connected successfully!");
+            soc.emit('username',nickname);
+            socket.current = soc;
+            heartbeat_src.currentTime=0;
+        });
+
+        // socket 연결 실패 시
+        soc.on("connect_error", (error) => {
+            console.error("Socket connection error:", error.message);
+          });
+
+        // 본인 user_id 얻어오기
+        soc.on("user_id", (socket_id)=>{
+            setMyId(socket_id);
+            console.log("Get myId");
+        });
+
+        // 전체 플레이어 정보 얻기
+        soc.on("join_user", (player)=>{
+            // 여기서 users 배열에 player 추가하고
+            // get_player에 player.id 와 player을 mapping
+            //users.current.push(player);
+            get_player.current[player.id] = player;
+        });
+
+        soc.on("update_state",(data)=>{
+            const player = get_player.current[data.id];
+            if(player){
+                player.x = data.x;
+                player.y = data.y;
+                player.dx = data.dx;
+                player.dy = data.dy;
+                player.state = data.state;
+                player.kill = data.kill;
+                player.hit=data.hit;
+            }
+        });
+
+        soc.on("leave_user", (id)=>{
+            delete get_player.current[id];
+        });
+
+
+        soc.on("bullets", (data)=>{
+            bullets.current[data.bulletId]=data;
+
+        });
+
+        soc.on('deletebullet', (data)=>{
+            delete bullets.current[data.bulletId];
+        });
+
+        soc.on('killed', (user_id)=>{
+            const player = get_player.current[user_id];
+            if(player){
+                player.kill += 1;
+            }
+        });
+
         const handleKeyDown = (e)=>{
-            setInteract(true);
+            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = true; 
@@ -209,7 +210,7 @@ function MainGame() {
         }
 
         const handleKeyUp = (e)=>{
-            setInteract(true);
+            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = false; 
@@ -228,18 +229,17 @@ function MainGame() {
               }
         }
         const handleCanvasClick = (e) => {
-            setInteract(true);
+            interact.current = true;
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
             if(num_bullet.current>0){
-                pistol_src.pause();
                 pistol_src.currentTime=0;
                 pistol_src.play();
             }
         };
 
         const handleMouseMove = (e) => {
-            setInteract(true);
+            interact.current = true;
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
         };
@@ -275,6 +275,10 @@ function MainGame() {
             window.removeEventListener("click", handleCanvasClick);
             window.removeEventListener("mousemove", handleMouseMove);
             document.removeEventListener('visibilitychange', handleVisibilityChange); 
+
+            reolad_src.pause();
+            heartbeat_src.pause();
+            pistol_src.pause();
         };
     }, []);
 
@@ -298,18 +302,22 @@ function MainGame() {
                 renderGame();
             }, rendering_interval);
 
-            const intervalId1 = setInterval(() => {
-                if(interact){
-                    updatesound();
-                }
-            }, 500);
-
             return () => {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
-                clearInterval(intervalId1);
             };
         }
       }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current, myId]);
+
+    useEffect(()=>{
+        if(interact.current){
+            const intervalId = setInterval(() => {
+               updatesound();
+            }, 500);
+            return () => {
+                clearInterval(intervalId);
+            };
+        }
+    }, [interact.current]);
 
     const updatesound = () =>{
         let closestdistance=100000000000;
@@ -434,7 +442,6 @@ function MainGame() {
                         iswall = 1;
                     }
                 };
-
                 // 명도 낮춤 효과
                 if (!isWithin45Degrees || iswall) {
                     context.globalAlpha = 0; // 투명도 설정 (0.5: 반투명)
@@ -576,7 +583,6 @@ function MainGame() {
             if(wall.current[q][p] === 1){
                 cur.x -= velocity;
             }
-       
         }
 
         // 지하 순간이동 처리
