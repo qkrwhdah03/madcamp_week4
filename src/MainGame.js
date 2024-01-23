@@ -27,7 +27,7 @@ function MainGame() {
     const socket = useRef(null);
 
     // 소리 재생을 위한 상호작용 변수 선언
-    const [interact, setInteract] = useState(false);
+    const interact = useRef(false);
 
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
@@ -138,6 +138,7 @@ function MainGame() {
         // 본인 user_id 얻어오기
         soc.on("user_id", (socket_id)=>{
             setMyId(socket_id);
+            console.log("Get myId");
         });
 
         // 전체 플레이어 정보 얻기
@@ -183,7 +184,7 @@ function MainGame() {
         });
 
         const handleKeyDown = (e)=>{
-            setInteract(true);
+            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = true; 
@@ -209,7 +210,7 @@ function MainGame() {
         }
 
         const handleKeyUp = (e)=>{
-            setInteract(true);
+            interact.current = true;
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = false; 
@@ -228,7 +229,7 @@ function MainGame() {
               }
         }
         const handleCanvasClick = (e) => {
-            setInteract(true);
+            interact.current = true;
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
             if(num_bullet.current>0){
@@ -239,7 +240,7 @@ function MainGame() {
         };
 
         const handleMouseMove = (e) => {
-            setInteract(true);
+            interact.current = true;
             mousepointerX.current=e.clientX;
             mousepointerY.current=e.clientY;
         };
@@ -298,18 +299,22 @@ function MainGame() {
                 renderGame();
             }, rendering_interval);
 
-            const intervalId1 = setInterval(() => {
-                if(interact){
-                    updatesound();
-                }
-            }, 500);
-
             return () => {
                 clearInterval(intervalId); // 컴포넌트가 unmount될 때 interval 해제
-                clearInterval(intervalId1);
             };
         }
       }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current, myId]);
+
+    useEffect(()=>{
+        if(interact.current){
+            const intervalId = setInterval(() => {
+               updatesound();
+            }, 500);
+            return () => {
+                clearInterval(intervalId);
+            };
+        }
+    }, [interact.current]);
 
     const updatesound = () =>{
         let closestdistance=100000000000;
