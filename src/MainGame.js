@@ -74,7 +74,6 @@ function MainGame() {
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
         setinteract(false);
-        console.log('인터렉트', interact);
         
         // 배경 map 읽어오기
         const image = new Image();
@@ -231,10 +230,9 @@ function MainGame() {
         }
         const handleCanvasClick = (e) => {
             setinteract(true);
-            console.log('클릭했어요', interact);
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
-            if(num_bullet.current>0){
+            if(num_bullet.current>0 && interact.current){
                 pistol_src.currentTime=0;
                 pistol_src.play();
             }
@@ -286,7 +284,9 @@ function MainGame() {
 
     const reload = () => {
         reolad_src.currentTime=0;
-        reolad_src.play();
+        if(interact.current){
+            reolad_src.play();
+        }
         setTimeout(() => {
             num_bullet.current = total_bullet_num;
             pressReload.current = false;
@@ -306,7 +306,6 @@ function MainGame() {
 
             const intervalId1 = setInterval(() => {
                 updatesound();
-                console.log(heartbeat_src.paused);
              }, 500);
             
 
@@ -320,7 +319,6 @@ function MainGame() {
 
     useEffect(()=>{
         if(interact){
-            console.log('1');
             heartbeat_src.play();
             soundplay.current=true;
         }
@@ -341,7 +339,6 @@ function MainGame() {
 
         if(!heartbeat_src.paused || soundplay.current){
             heartbeat_src.pause();
-            console.log('돌아갑니다');
             if(closestdistance<250){
                 heartbeat_src.playbackRate=3;
                 heartbeat_src.play();
@@ -381,9 +378,11 @@ function MainGame() {
         } else if(cameraY + canvas.height > mapSizeY){
             cameraY = mapSizeY - canvas.height;
         }
-        context.globalAlpha = 0.5;
+
+
+        context.globalAlpha = 0.9;
         context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-        context.globalAlpha = 1;
+        context.globalAlpha = 1.0;
 
         context.save();
         context.beginPath();
