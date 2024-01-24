@@ -17,6 +17,9 @@ function MainGame() {
     const knifeposition = useRef(0);
     const knifeswings = useRef([]);
 
+
+    const items = useRef({});
+
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
     const pistol = useRef(null);
@@ -24,6 +27,7 @@ function MainGame() {
     const knife = useRef(null);
     const knife2 = useRef(null);
     const bullet_img = useRef(null);
+    const item_img = useRef(null);
 
     const wall = useRef(null); //##########################################(1)
 
@@ -57,6 +61,7 @@ function MainGame() {
     const knife_src2 = './troop/knife/meleeattack/survivor-meleeattack_knife_7.png'
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
+    const item_src = '/box.png'
     const reolad_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
     const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
     const pistolsound_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
@@ -72,8 +77,10 @@ function MainGame() {
     const map_y = 1920 ;// 전체 맵 크기
     const total_bullet_num = 12; // 탄창 총알 수
     const damage = 10;  // 총알 데미지
-    const collision_distance = 20; // 총알 충돌 거리 설정
+    const bullet_collision_distance = 20; // 총알 충돌 거리 설정
+    const item_collision_distance = 30;
     const tile_size = 32; // Tiled tile하나 크기 32 px
+    const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
 
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
@@ -89,7 +96,7 @@ function MainGame() {
         const image = new Image();
         image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
         image.onload = () =>{
-            console.log("Read Image Done");
+            console.log("Read Map Image Done");
             map.current = image;
         }
 
@@ -120,7 +127,7 @@ function MainGame() {
         const user_image2 = new Image();
         user_image2.src = process.env.PUBLIC_URL + pistol_src2;
         user_image2.onload = ()=>{
-            console.log("Read user Image Done");
+            console.log("Read user Image2 Done");
             pistol2.current = user_image2;
         }
 
@@ -146,6 +153,14 @@ function MainGame() {
             bullet_img.current = bullet_image;
         }
 
+        // 아이템 이미지 가져오기
+        const item_image = new Image();
+        item_image.src = process.env.PUBLIC_URL + item_src;
+        item_image.onload = ()=>{
+            console.log("Read Item Image Done");
+            item_img.current = item_image;
+        }
+
         const soc = io.connect("http://172.10.5.177:80", {transports:['websocket']});
 
         // socket 연결 성공 시
@@ -165,6 +180,12 @@ function MainGame() {
         soc.on("user_id", (socket_id)=>{
             setMyId(socket_id);
             console.log("Get myId");
+        });
+
+        // item 기존 정보
+        soc.on("item_init", (item_init)=>{
+            items.current = item_init;
+            console.log("기존 아이템 정보 ", items.current);
         });
 
         // 전체 플레이어 정보 얻기
@@ -212,6 +233,14 @@ function MainGame() {
             if(player){
                 player.kill += 1;
             }
+        });
+
+        soc.on('spawn_item', (pos)=>{
+            items.current[pos.id] = {x:pos.x, y:pos.y};
+        });
+
+        soc.on('delete_item', (item_id)=>{
+            delete items.current[item_id];
         });
 
         const handleKeyDown = (e)=>{
@@ -340,7 +369,7 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && wall.current && myId) {
+        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && wall.current && myId && item_img.current) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -359,7 +388,7 @@ function MainGame() {
                 clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
-      }, [canvasRef.current, socket.current, map.current, pistol.current, pistol2.current, wall.current, myId]);
+      }, [myId]);
 
 
     useEffect(()=>{
@@ -480,7 +509,7 @@ function MainGame() {
                 const edif = Math.sqrt(edifx**2 + edify**2);
                 const inner = (mdifx*edifx+mdify*edify)/(mdif*edif);
                 const innerangle = Math.acos(inner);
-                const isWithin45Degrees = innerangle < Math.PI / 4;
+                const isWithin = innerangle < vision_angle;
 
                 let iswall = 0;
                 const enemyangle = Math.acos(edifx/edif);
@@ -501,7 +530,7 @@ function MainGame() {
                     }
                 };
                 // 명도 낮춤 효과
-                if (!isWithin45Degrees || iswall) {
+                if (!isWithin || iswall) {
                     context.globalAlpha = 0; // 투명도 설정 (0.5: 반투명)
                 }
                 else{
@@ -626,9 +655,51 @@ function MainGame() {
         }
         bullets.current = filtered_bullets;
 
+        // 아이템 그리기
+        for(let item_id in items.current){
+            let item_cur = items.current[item_id];
+            
+            const mdifx = mousepointerX.current-context.canvas.offsetLeft-cur.x+cameraX;
+            const mdify = mousepointerY.current-context.canvas.offsetTop-cur.y+cameraY;
+            const edifx = item_cur.x - cur.x;
+            const edify = item_cur.y - cur.y;
+            const mdif = Math.sqrt(mdifx**2 + mdify**2);
+            const edif = Math.sqrt(edifx**2 + edify**2);
+            const inner = (mdifx*edifx+mdify*edify)/(mdif*edif);
+            const innerangle = Math.acos(inner);
+            const isWithin = innerangle < vision_angle;
 
+            let iswall = 0;
+            const itemangle = Math.acos(edifx/edif);
+            let sign=1;
+            if(edify<0)sign=-1;
+            const plusx = search_distance*Math.cos(itemangle);
+            const plusy = search_distance*Math.sin(itemangle)*sign;
+            let x=cur.x;
+            let y=cur.y;
+            const n = Math.floor(edif/search_distance);
+            for (let i=1; i<=n; i++){
+                x+=plusx;
+                y+=plusy;
+                const p = Math.floor(x/tile_size);
+                const q = Math.floor(y/tile_size);
+                if(wall.current[q][p] === 1){
+                    iswall = 1;
+                }
+            };
+
+            if(isWithin && !iswall){
+                context.drawImage(item_img.current, item_cur.x - cameraX, item_cur.y - cameraY);   
+            }
+        }
+
+
+        // 아이템 충돌처리
+        handleEatItem(cur);
+        
         // 총알 충돌처리 
         handleCollisions(cur);
+
         
         // 킬 수 표시하기
         context.font = '20px Arial';
@@ -712,22 +783,23 @@ function MainGame() {
     }
     
     // 충돌 감지 함수
-    function checkCollision(character, bullet) {
+    function checkCollision(character, bullet, criteria) {
         const distance = calculateDistance(
             character.x, character.y,
             bullet.x, bullet.y
         );
-    
         // 일정 거리 내에 있으면 충돌로 간주
-        return distance < collision_distance;
+        return distance < criteria;
     }
+
+
 
     function handleCollisions(cur) {
         //const cur = get_player.current[myId];
     
         for (let bulletId in bullets.current) {
             const bullet_cur = bullets.current[bulletId];
-            if (checkCollision(cur, bullet_cur)) {
+            if (checkCollision(cur, bullet_cur, bullet_collision_distance)) {
                 // 충돌 발생! 여기서 필요한 동작 수
                 // 예를 들어, 캐릭터의 체력을 감소시키는 등의 동작 수행
                 cur.state -= damage; // 체력 10 감소
@@ -745,11 +817,12 @@ function MainGame() {
                 }
             }
         }
+
         for (let i=0; i<knifeswings.current.length; i++){
             const knifeswing = knifeswings.current[i];
             console.log(knifeswing);
-            if (checkCollision(cur, knifeswing)){
-                cur.state-=30;
+            if (checkCollision(cur, knifeswing, bullet_collision_distance)){
+                cur.state-=50;
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("deathknife", cur, knifeswing);
                     // bullet_cur.user로 점수나 킬 올리기
@@ -760,6 +833,19 @@ function MainGame() {
         }
         knifeswings.current=[];
     }  
+
+    function handleEatItem(cur){
+        for(let item_id in items.current){
+            const item_cur = items.current[item_id];
+            if(checkCollision(cur, item_cur, item_collision_distance)){
+                cur.state += 50;
+                if(cur.state > 100) cur.state = 100;
+
+                delete items.current[item_id];
+                socket.current.emit('eat_item', item_id);
+            }
+        }
+    }
 
     return (
     <div className='maingame' >
