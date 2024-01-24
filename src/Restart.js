@@ -17,15 +17,21 @@ function Restart(){
     navigate('../mainGame', {replace:false, state:{nickname : nickname}})
     }
     return (
-        <div className='restart'>
-            <div className='you_died'>{network_error? "Network Connection Error":"You were killed by "+killed_by+"!"}</div>
-            <div className='restart_game_container'>
-            <div className='restart_title'>Restart</div>
-            <div className='restart_game_input_block'>
-            <label htmlFor='nickname'>닉네임</label>
-            <input type='text' id='nickname' value={nickname} onChange={handleNickNameChange}></input>
-          </div>
-          <button className='enter_button' type='submit' onClick={handleEnter}>입장</button>
+        <div className='background'>
+            <div className='restart' style={{
+          background: `url('${process.env.PUBLIC_URL}/restart.png')`,
+          backgroundSize: '70%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'}}>
+                <div className='you_died'>{network_error? "Network Connection Error":killed_by+"!"}
+                </div>
+                <div className='restart_game_container'>
+                    <div className='restart_game_input_block'>
+                        <label className='nickname' htmlFor='nickname'>Nickname</label>
+                        <input className='input' type='text' id='nickname' value={nickname} onChange={handleNickNameChange}></input>
+                        <button className='enter_button' type='submit' onClick={handleEnter}>Restart</button>
+                    </div>
+                </div>
             </div>
         </div>
     )

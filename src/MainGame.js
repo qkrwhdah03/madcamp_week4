@@ -74,7 +74,6 @@ function MainGame() {
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
         setinteract(false);
-        
         // 배경 map 읽어오기
         const image = new Image();
         image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정

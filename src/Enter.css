@@ -1,32 +1,56 @@
+.background{
+  height: 100vh; /* 100% 화면 높이 */
+  width : 100vw;
+  background-color: #0F101D;
+}
 .enter {
     display: flex;
-    align-items: center;
     justify-content: center;
     height: 100vh; /* 100% 화면 높이 */
     width : 100vw;
-  }
+}
   
   
   .enter_game_input_container{
-    width: 20%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 18vw;
+    height: 12vh;
     text-align: center;
-    border: 1px solid #000;
-    padding: 30px;
+    background-color: #0F101D;
+    border-radius: 1vh;
+    padding: 5vh;
     margin-bottom: 10px;
+    margin-top: 45vh;
   }
   
-  .enter_game_input_title{
-    font-weight: bold;
-    margin-bottom: 10px;
-  }
   
   .enter_game_input_block {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 10px;
+    color: white;
+    width: 10vw;
+    height: 3vh;
+    border-radius: 2vh;
+    margin-bottom: 9vh;
+  }
+
+  .input{
+    width: 10vw;
+    height: 2.5vh;
+  }
+
+  .nickname{
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 2vb;
+    margin-bottom: 2vh;
   }
   
   .enter_button{
-    margin-top: 10px;
+    margin-top: 3vh;
+    border-radius: 1vh;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 1.5vb;
   }

@@ -15,14 +15,19 @@ function Enter(){
     }
   
     return (
-      <div className="enter">
-        <div className='enter_game_input_container'>
-          <div className='enter_game_input_title'>게임 입장</div>
-          <div className='enter_game_input_block'>
-            <label htmlFor='nickname'>닉네임</label>
-            <input type='text' id='nickname' value={nickname} onChange={handleNickNameChange}></input>
+      <div className='background'>
+        <div className="enter" style={{
+          background: `url('${process.env.PUBLIC_URL}/enter.png')`,
+          backgroundSize: '70%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'}}>
+          <div className='enter_game_input_container'>
+            <div className='enter_game_input_block'>
+              <label className="nickname" htmlFor='nickname'>Nickname</label>
+              <input className="input" type='text' id='nickname' value={nickname} onChange={handleNickNameChange}></input>
+              <button className='enter_button' type='submit' onClick={handleEnter}>Start</button>
+            </div>
           </div>
-          <button className='enter_button' type='submit' onClick={handleEnter}>입장</button>
         </div>
       </div>
     );
