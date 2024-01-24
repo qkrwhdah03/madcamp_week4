@@ -121,7 +121,7 @@ function MainGame() {
             bullet_img.current = bullet_image;
         }
 
-        const soc = io.connect("http://143.248.222.162", {transports:['websocket']});
+        const soc = io.connect("http://172.10.5.177:80", {transports:['websocket']});
 
         // socket 연결 성공 시
         soc.on("connect", () => {
