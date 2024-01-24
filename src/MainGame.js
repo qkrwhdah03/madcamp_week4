@@ -50,9 +50,8 @@ function MainGame() {
     const mousepointerY = useRef(null);
 
     //유저 무기 정보
-    const pistolstate = useRef(true);
-    const knifestate = useRef(false);
-    
+    const weaponstate = useRef(1);
+
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
     const pistol_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
@@ -206,7 +205,9 @@ function MainGame() {
                 player.state = data.state;
                 player.kill = data.kill;
                 player.hit=data.hit;
+                player.weapon=data.weapon;
             }
+            console.log(player.weapon);
         });
 
         soc.on("leave_user", (id)=>{
@@ -264,12 +265,10 @@ function MainGame() {
                     };
                     break;
                 case '1':
-                    pistolstate.current=true;
-                    knifestate.current=false;
+                    weaponstate.current=1;
                     break;
                 case '2':
-                    pistolstate.current=false;
-                    knifestate.current=true;
+                    weaponstate.current=2;
                     break;
                 default:
                     break;
@@ -297,14 +296,15 @@ function MainGame() {
         const handleCanvasClick = (e) => {
             setinteract(true);
             const mouseposition = [e.clientX,e.clientY];
-            if(pistolstate.current){
+            if(weaponstate.current===1){
                 bullet.current=mouseposition;
                 if(num_bullet.current>0 && soundplay.current){
                     pistolsound_src.currentTime=0;
                     pistolsound_src.play();
                 }
             }
-            else if(knifestate.current && knifeswing.current===0){
+            else if(weaponstate.current===2){
+                weaponstate.current=2.5;
                 knifeposition.current=mouseposition;
                 knifeswing.current=30;
                 knifesound_src.currentTime=0;
@@ -328,6 +328,7 @@ function MainGame() {
                 navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
         };
+
         
 
         window.addEventListener("keyup", handleKeyUp);
@@ -456,7 +457,7 @@ function MainGame() {
         }
 
 
-        context.globalAlpha = 0.9;
+        context.globalAlpha = 0.75;
         context.drawImage(map.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
         context.globalAlpha = 1.0;
 
@@ -549,7 +550,7 @@ function MainGame() {
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
-            if(pistolstate.current){
+            if(user.weapon===1){
                 if(user.hit){
                     context.drawImage(pistol2.current, -pistol2.current.width / 2, -pistol2.current.height / 2);
                 }
@@ -558,13 +559,11 @@ function MainGame() {
                 }
             }
 
-            else if(knifestate.current){
-                if(knifeswing.current>0){
-                    context.drawImage(knife2.current, -knife2.current.width / 2, -knife2.current.height / 2);
-                }
-                else{
-                    context.drawImage(knife.current, -knife.current.width / 2, -knife.current.height / 2);
-                }
+            else if(user.weapon===2){
+                context.drawImage(knife.current, -knife.current.width / 2, -knife.current.height / 2);
+            }
+            else if(user.weapon===2.5){
+                context.drawImage(knife2.current, -knife2.current.width / 2, -knife2.current.height / 2);
             }
             context.rotate(-angle);
             context.translate(-tx, -ty);
@@ -607,7 +606,7 @@ function MainGame() {
             }
         }
 
-        if(knifeposition.current){
+        if(weaponstate.current===2.5){
             knifeswing.current -=1;
             if (knifeswing.current===29){
                 const angle = Math.atan2(
@@ -624,7 +623,7 @@ function MainGame() {
 
             }
             if(knifeswing.current===0){
-                knifeposition.current=null;
+                weaponstate.current=2;
             }
         }
 
@@ -707,7 +706,9 @@ function MainGame() {
         context.font = '20px Arial';
         context.fillStyle = '#FFF';
         context.textAlign = 'center';
-        context.fillText("Kill : "+ cur.kill, canvas.width- 80, 30);
+        context.fillText("Kill : "+ cur.kill, canvas.width- 80, 60);
+        // 접속 유저 수 표시 
+        context.fillText("Total Users : "+ Object.keys(get_player.current).length, canvas.width-80, 30);
 
 
         // 현재 자기 자신 위치 업데이트
@@ -772,7 +773,7 @@ function MainGame() {
         if(cur.hit){
             cur.hit-=1;
         }
-
+        cur.weapon=weaponstate.current;
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
