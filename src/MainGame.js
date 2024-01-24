@@ -14,11 +14,15 @@ function MainGame() {
     const get_player = useRef({});
     const bullets = useRef({});
     const bullet = useRef(null);
+    const knifeposition = useRef(0);
+    const knifeswings = useRef([]);
 
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
-    const troop = useRef(null);
-    const troop2 = useRef(null);
+    const pistol = useRef(null);
+    const pistol2 = useRef(null);
+    const knife = useRef(null);
+    const knife2 = useRef(null);
     const bullet_img = useRef(null);
 
     const wall = useRef(null); //##########################################(1)
@@ -41,16 +45,22 @@ function MainGame() {
     const mousepointerX = useRef(null);
     const mousepointerY = useRef(null);
 
+    //유저 무기 정보
+    const pistolstate = useRef(true);
+    const knifestate = useRef(false);
     
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
-    const troop_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
-    const troop_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
+    const pistol_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
+    const pistol_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
+    const knife_src = './troop/knife/meleeattack/survivor-meleeattack_knife_0.png'
+    const knife_src2 = './troop/knife/meleeattack/survivor-meleeattack_knife_7.png'
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
     const reolad_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
     const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
-    const pistol_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
+    const pistolsound_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
+    const knifesound_src = new Audio(process.env.PUBLIC_URL + '/sounds/knife.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속또
     const reload_time = 1000; // 재장전 시간 (ms)
@@ -68,6 +78,7 @@ function MainGame() {
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
     const reload_frame_number = useRef(reload_time / rendering_interval) // 재장전 프레임 수 = 재장전시간 / 렌더링 주기
+    const knifeswing = useRef(0);
 
     useEffect(()=>{
 
@@ -100,17 +111,31 @@ function MainGame() {
 
         // User 캐릭터 가져오기
         const user_image = new Image();
-        user_image.src = process.env.PUBLIC_URL + troop_src;
+        user_image.src = process.env.PUBLIC_URL + pistol_src;
         user_image.onload = ()=>{
             console.log("Read user Image Done");
-            troop.current = user_image;
+            pistol.current = user_image;
         }
 
         const user_image2 = new Image();
-        user_image2.src = process.env.PUBLIC_URL + troop_src2;
+        user_image2.src = process.env.PUBLIC_URL + pistol_src2;
         user_image2.onload = ()=>{
             console.log("Read user Image Done");
-            troop2.current = user_image2;
+            pistol2.current = user_image2;
+        }
+
+        const user_image3 = new Image();
+        user_image3.src = process.env.PUBLIC_URL + knife_src;
+        user_image3.onload = ()=>{
+            console.log("Read user Image Done");
+            knife.current = user_image3;
+        }
+
+        const user_image4 = new Image();
+        user_image4.src = process.env.PUBLIC_URL + knife_src2;
+        user_image4.onload = ()=>{
+            console.log("Read user Image Done");
+            knife2.current = user_image4;
         }
 
         // 총알 이미지 가져오기
@@ -173,6 +198,11 @@ function MainGame() {
 
         });
 
+        soc.on("knifeswings", (data)=>{
+            knifeswings.current.push(data);
+            console.log(knifeswings.current);
+        });
+
         soc.on('deletebullet', (data)=>{
             delete bullets.current[data.bulletId];
         });
@@ -204,6 +234,14 @@ function MainGame() {
                         reload();
                     };
                     break;
+                case '1':
+                    pistolstate.current=true;
+                    knifestate.current=false;
+                    break;
+                case '2':
+                    pistolstate.current=false;
+                    knifestate.current=true;
+                    break;
                 default:
                     break;
               }
@@ -229,11 +267,19 @@ function MainGame() {
         }
         const handleCanvasClick = (e) => {
             setinteract(true);
-            const bulletposition = [e.clientX,e.clientY];
-            bullet.current=bulletposition;
-            if(num_bullet.current>0 && soundplay.current){
-                pistol_src.currentTime=0;
-                pistol_src.play();
+            const mouseposition = [e.clientX,e.clientY];
+            if(pistolstate.current){
+                bullet.current=mouseposition;
+                if(num_bullet.current>0 && soundplay.current){
+                    pistolsound_src.currentTime=0;
+                    pistolsound_src.play();
+                }
+            }
+            else if(knifestate.current && knifeswing.current===0){
+                knifeposition.current=mouseposition;
+                knifeswing.current=30;
+                knifesound_src.currentTime=0;
+                knifesound_src.play();
             }
         };
 
@@ -277,7 +323,7 @@ function MainGame() {
 
             reolad_src.pause();
             heartbeat_src.pause();
-            pistol_src.pause();
+            pistolsound_src.pause();
         };
     }, []);
 
@@ -294,7 +340,7 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && troop.current && troop2.current && wall.current && myId) {
+        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && wall.current && myId) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -313,7 +359,7 @@ function MainGame() {
                 clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
-      }, [canvasRef.current, socket.current, map.current, troop.current, troop2.current, wall.current, myId]);
+      }, [canvasRef.current, socket.current, map.current, pistol.current, pistol2.current, wall.current, myId]);
 
 
     useEffect(()=>{
@@ -472,12 +518,22 @@ function MainGame() {
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
-
-            if(user.hit){
-                context.drawImage(troop2.current, -troop.current.width / 2, -troop.current.height / 2);
+            if(pistolstate.current){
+                if(user.hit){
+                    context.drawImage(pistol2.current, -pistol2.current.width / 2, -pistol2.current.height / 2);
+                }
+                else{
+                    context.drawImage(pistol.current, -pistol.current.width / 2, -pistol.current.height / 2);
+                }
             }
-            else{
-                context.drawImage(troop.current, -troop.current.width / 2, -troop.current.height / 2);
+
+            else if(knifestate.current){
+                if(knifeswing.current>0){
+                    context.drawImage(knife2.current, -knife2.current.width / 2, -knife2.current.height / 2);
+                }
+                else{
+                    context.drawImage(knife.current, -knife.current.width / 2, -knife.current.height / 2);
+                }
             }
             context.rotate(-angle);
             context.translate(-tx, -ty);
@@ -493,12 +549,11 @@ function MainGame() {
                     bullet.current[1]-context.canvas.offsetTop-cur.y+cameraY,
                     bullet.current[0]-context.canvas.offsetLeft-cur.x+cameraX
                 )
-                cur.angle = angle;
             
                 socket.current.emit("shoot_bullet", {
-                    x: cur.x + 30*Math.cos(cur.angle)-20*Math.sin(cur.angle), //캐릭터 총구로 보정 
-                    y: cur.y +30*Math.sin(cur.angle)+20*Math.cos(cur.angle), // 캐릭터 총구로 보정
-                    angle:cur.angle,
+                    x: cur.x + 30*Math.cos(angle)-20*Math.sin(angle), //캐릭터 총구로 보정 
+                    y: cur.y +30*Math.sin(angle)+20*Math.cos(angle), // 캐릭터 총구로 보정
+                    angle:angle,
                     user : cur.id, // 누가 쐈는지 저장
                     user_name : cur.nickname
                 })
@@ -520,6 +575,29 @@ function MainGame() {
                 
             }
         }
+
+        if(knifeposition.current){
+            knifeswing.current -=1;
+            if (knifeswing.current===29){
+                const angle = Math.atan2(
+                    knifeposition.current[1]-context.canvas.offsetTop-cur.y+cameraY,
+                    knifeposition.current[0]-context.canvas.offsetLeft-cur.x+cameraX
+                )
+                socket.current.emit("knifeswing", {
+                    x: cur.x + 30*Math.cos(angle), 
+                    y: cur.y +30*Math.sin(angle), 
+                    angle:angle,
+                    user : cur.id,
+                    user_name : cur.nickname
+                })
+
+            }
+            if(knifeswing.current===0){
+                knifeposition.current=null;
+            }
+        }
+
+
 
         // 총알 그리기 + 맵에서 나간 총알 삭제
         const filtered_bullets = {};
@@ -667,6 +745,20 @@ function MainGame() {
                 }
             }
         }
+        for (let i=0; i<knifeswings.current.length; i++){
+            const knifeswing = knifeswings.current[i];
+            console.log(knifeswing);
+            if (checkCollision(cur, knifeswing)){
+                cur.state-=30;
+                if(cur.state <= 0){ // 사망 처리
+                    socket.current.emit("deathknife", cur, knifeswing);
+                    // bullet_cur.user로 점수나 킬 올리기
+                    heartbeat_src.pause();
+                    navigate('../Restart', {replace:false, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
+                }
+            }
+        }
+        knifeswings.current=[];
     }  
 
     return (
