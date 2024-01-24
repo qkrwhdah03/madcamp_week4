@@ -324,7 +324,7 @@ function MainGame() {
                 console.log('현재 창이 비활성화되어 있습니다.');
                 // 비활성화 되면..? 어떻게 처리?
                 // 1.Navigate으로 connection이 끊긴 창으로 이동하게
-                heartbeat_src.pause();
+                if(!heartbeat_src.paused) heartbeat_src.pause();
                 navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
         };
@@ -353,6 +353,7 @@ function MainGame() {
             reolad_src.pause();
             heartbeat_src.pause();
             pistolsound_src.pause();
+            knifesound_src.pause();
         };
     }, []);
 
@@ -369,7 +370,8 @@ function MainGame() {
 
     useEffect(() => {
         // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && wall.current && myId && item_img.current) {
+        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && 
+            wall.current && myId && item_img.current && knife.current && knife2.current) {
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -812,7 +814,7 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, bullet_cur);
                     // bullet_cur.user로 점수나 킬 올리기
-                    heartbeat_src.pause();
+                    if(!heartbeat_src.paused) heartbeat_src.pause();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
                 }
             }
@@ -826,7 +828,7 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("deathknife", cur, knifeswing);
                     // bullet_cur.user로 점수나 킬 올리기
-                    heartbeat_src.pause();
+                    if(!heartbeat_src.paused) heartbeat_src.pause();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
                 }
             }
