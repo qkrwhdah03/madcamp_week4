@@ -17,8 +17,10 @@ function MainGame() {
     const knifeposition = useRef(0);
     const knifeswings = useRef([]);
 
-
     const items = useRef({});
+
+    // 킬 로그 저장
+    const kill_log = useRef([]);
 
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
@@ -80,6 +82,7 @@ function MainGame() {
     const item_collision_distance = 30;
     const tile_size = 32; // Tiled tile하나 크기 32 px
     const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
+    const kill_log_frame = 75;
 
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
@@ -229,11 +232,12 @@ function MainGame() {
             delete bullets.current[data.bulletId];
         });
 
-        soc.on('killed', (user_id)=>{
-            const player = get_player.current[user_id];
+        soc.on('killed', (dead, user)=>{
+            const player = get_player.current[user.id];
             if(player){
                 player.kill += 1;
             }
+            kill_log.current.push({kill:user.user_name, dead:dead.nickname, life: kill_log_frame});
         });
 
         soc.on('spawn_item', (pos)=>{
@@ -707,9 +711,24 @@ function MainGame() {
         context.fillStyle = '#FFF';
         context.textAlign = 'center';
         context.fillText("Kill : "+ cur.kill, canvas.width- 80, 60);
+        
         // 접속 유저 수 표시 
         context.fillText("Total Users : "+ Object.keys(get_player.current).length, canvas.width-80, 30);
 
+
+        // 킬 로그'
+        context.font = '20px Arial';
+        const filtered_kill_log = [];
+        const size = kill_log.current.length;
+        for(let i=0; i<size; i++){
+            const log = kill_log.current[i];
+            context.fillText(log.kill +" kills " +log.dead, canvas.width-100, 100 + 15 *i);
+            log.life -= 1;
+            if(log.life > 0){
+                filtered_kill_log.push(log);
+            }
+        }
+        kill_log.current = filtered_kill_log
 
         // 현재 자기 자신 위치 업데이트
         
