@@ -23,9 +23,9 @@ function Restart(){
           backgroundSize: '70%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat'}}>
-                <div className='you_died'>{network_error? "Network Connection Error":killed_by+"!"}
-                </div>
                 <div className='restart_game_container'>
+                    <div className='you_died'>{network_error? "Network Connection Error":"You were killed by " +killed_by+"!"}
+                    </div>
                     <div className='restart_game_input_block'>
                         <label className='nickname' htmlFor='nickname'>Nickname</label>
                         <input className='input' type='text' id='nickname' value={nickname} onChange={handleNickNameChange}></input>

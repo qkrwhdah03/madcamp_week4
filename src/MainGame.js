@@ -121,7 +121,7 @@ function MainGame() {
             bullet_img.current = bullet_image;
         }
 
-        const soc = io.connect("http://172.10.7.21:80", {transports:['websocket']});
+        const soc = io.connect("http://143.248.222.162", {transports:['websocket']});
 
         // socket 연결 성공 시
         soc.on("connect", () => {
@@ -231,7 +231,7 @@ function MainGame() {
             setinteract(true);
             const bulletposition = [e.clientX,e.clientY];
             bullet.current=bulletposition;
-            if(num_bullet.current>0 && interact.current){
+            if(num_bullet.current>0 && soundplay.current){
                 pistol_src.currentTime=0;
                 pistol_src.play();
             }
@@ -283,7 +283,7 @@ function MainGame() {
 
     const reload = () => {
         reolad_src.currentTime=0;
-        if(interact.current){
+        if(soundplay.current){
             reolad_src.play();
         }
         setTimeout(() => {

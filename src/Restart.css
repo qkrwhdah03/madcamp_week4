@@ -12,25 +12,28 @@
 }
 
 .you_died{
-    margin-left: 44vw;
-    margin-top: 7vh;
+    margin:auto;
+    margin-bottom: 0;
+    margin-top: 0.2vh;
+    margin-bottom: 1.5vh;
     font-weight: bold;
-    font-size: 3vb;
-    color: #0F101D;
+    font-size: 2.5vb;
+    color: #FFFFFF;
 }
 
 .restart_game_container{
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 18vw;
-    height: 12vh;
+    flex-direction: column;
+    width: 20vw;
+    height: 16vh;
     text-align: center;
     background-color: #0F101D;
     border-radius: 1vh;
     padding: 5vh;
     margin-left: 38vw;
-    margin-top: 35vh;
+    margin-top: 48vh;
 }
 
 .restart_title{
@@ -52,7 +55,8 @@
 .nickname{
     font-family: Arial, Helvetica, sans-serif;
     font-size: 2vb;
-    margin-bottom: 2vh;
+    margin-top: 2vh;
+    margin-bottom: 1vh;
 }
 
 .input{
