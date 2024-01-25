@@ -1113,7 +1113,7 @@ function MainGame() {
         if(beforestate!==afterstate){
             bloodlife.current=10;
         }
-        if(bloodlife.current4>0){
+        if(bloodlife.current>0){
             bloodlife.current-=1;
             context.globalAlpha = 0.3;
             context.drawImage(blood.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
@@ -1252,6 +1252,7 @@ function MainGame() {
                     // bullet_cur.user로 점수나 킬 올리기
                     closeAllSound();
                     navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
+                    break;
                 }
             }
         }
@@ -1265,6 +1266,7 @@ function MainGame() {
                     // bullet_cur.user로 점수나 킬 올리기
                     closeAllSound();
                     navigate('../Restart', {replace:true, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
+                    break;
                 }
             }
         }
@@ -1279,6 +1281,7 @@ function MainGame() {
                     // bullet_cur.user로 점수나 킬 올리기
                     closeAllSound();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : fire.user_name, error:false}});
+                    break;
                 }
             }
         }
@@ -1293,6 +1296,7 @@ function MainGame() {
                         // bullet_cur.user로 점수나 킬 올리기
                         closeAllSound();
                         navigate('../Restart', {replace:false, state:{nickname : nickname, who : bomb.user_name, error:false}});
+                        break;
                     }
                 }
             }
