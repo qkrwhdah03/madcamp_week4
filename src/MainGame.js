@@ -49,7 +49,12 @@ function MainGame() {
     // 소리 재생을 위한 상호작용 변수 선언
     const [interact, setinteract] = useState(false);
     const soundplay = useRef(false);
-
+    const reload_sound_ready = useRef(false);
+    const heartbeat_sound_ready = useRef(false);
+    const pistol_sound_ready = useRef(false);
+    const knife_sound_ready = useRef(false);
+    const fire_sound_ready = useRef(false);
+    const firereload_sound_ready = useRef(false);
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
@@ -75,7 +80,7 @@ function MainGame() {
     const bomb_src2 =  './troop/flashlight/meleeattack/survivor-meleeattack_flashlight_1.png';
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
-    const item_src = '/box.png'
+    const item_src = '/Apple.png'
     const fire_src = '/fire.png';
     const bombthrow_src = '/bomb.png';
     const explosion_src = '';
@@ -105,6 +110,38 @@ function MainGame() {
     const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
     const kill_log_frame = 75;
 
+    // 소리 로딩 완료 변수
+    
+
+    // Sound 로딩 처리
+    reload_src.addEventListener('canplaythrough', () => {
+        reload_sound_ready.current = true;
+    });
+    heartbeat_src.addEventListener('canplaythrough', () => {
+        heartbeat_sound_ready.current = true;
+    });
+    pistolsound_src.addEventListener('canplaythrough', () => {
+        pistol_sound_ready.current = true;
+    });
+    knifesound_src.addEventListener('canplaythrough', () => {
+        knife_sound_ready.current = true;
+    });
+    firesound_src.addEventListener('canplaythrough', () => {
+        fire_sound_ready.current = true;
+    });
+    firereload_src.addEventListener('canplaythrough', () => {
+        firereload_sound_ready.current = true;
+    });
+
+    const closeAllSound = () => {
+        if(!reload_src.paused) reload_src.pause();
+        if(!heartbeat_src.paused) heartbeat_src.pause();
+        if(!pistolsound_src.paused) pistolsound_src.pause();
+        if(!firesound_src.paused) firesound_src.pause();
+        if(!firereload_src.paused) firereload_src.pause();
+        if(!knifesound_src.paused) knifesound_src.pause();
+    };
+
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
     const reload_frame_number = useRef(reload_time / rendering_interval) // 재장전 프레임 수 = 재장전시간 / 렌더링 주기
@@ -117,9 +154,11 @@ function MainGame() {
 
     useEffect(()=>{
 
-        // 초기화 후, socket.io connection 만들기
+        // 초기화 
         get_player.current = {};
         setinteract(false);
+
+
         // 배경 map 읽어오기
         const image = new Image();
         image.src = process.env.PUBLIC_URL + map_src; // 이미지 파일 경로 설정
@@ -395,7 +434,7 @@ function MainGame() {
                 bullet.current=mouseposition;
                 if(num_bullet.current>0 && soundplay.current){
                     pistolsound_src.currentTime=0;
-                    pistolsound_src.play();
+                    if(pistolsound_src.paused) pistolsound_src.play();
                 }
             }
             else if(weaponstate.current===2){
@@ -403,7 +442,11 @@ function MainGame() {
                 knifeposition.current=mouseposition;
                 knifeswing.current=25;
                 knifesound_src.currentTime=0;
-                knifesound_src.play();
+
+                if(soundplay.current && knife_sound_ready.current){
+                    if(!knifesound_src.paused) knifesound_src.pause();
+                    if(knifesound_src.paused) knifesound_src.play();
+                }
             }
             else if(weaponstate.current===3){
                 weaponstate.current=3.5;
@@ -433,7 +476,8 @@ function MainGame() {
                 console.log('현재 창이 비활성화되어 있습니다.');
                 // 비활성화 되면..? 어떻게 처리?
                 // 1.Navigate으로 connection이 끊긴 창으로 이동하게
-                if(!heartbeat_src.paused) heartbeat_src.pause();
+                
+                closeAllSound();
                 navigate('../Restart', {replace:true, state:{nickname : nickname, who : "Network Connection Error",error:true}});
               }
         };
@@ -460,17 +504,15 @@ function MainGame() {
             window.removeEventListener("mousemove", handleMouseMove);
             document.removeEventListener('visibilitychange', handleVisibilityChange); 
 
-            reload_src.pause();
-            heartbeat_src.pause();
-            pistolsound_src.pause();
-            knifesound_src.pause();
+
+            closeAllSound();
         };
     }, []);
 
     const reload = () => {
         if(weaponstate.current===1){
             reload_src.currentTime=0;
-            if(soundplay.current){
+            if(soundplay.current && reload_sound_ready && reload_src.paused){
                 reload_src.play();
             }
             setTimeout(() => {
@@ -480,7 +522,7 @@ function MainGame() {
         }
         else if(weaponstate.current===3 || weaponstate.current===3.5){
             firereload_src.currentTime=0;
-            if(soundplay.current){
+            if(soundplay.current && firereload_sound_ready && firereload_src.paused){
                 firereload_src.play();
             }
             setTimeout(() => {
@@ -491,9 +533,29 @@ function MainGame() {
     };
 
     useEffect(() => {
-        // 컴포넌트가 마운트된 후 canvas에 접근
-        if (canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && 
-            wall.current && myId && item_img.current && knife.current && knife2.current) {
+
+        const check_ready = ()=>{
+            return (
+                canvasRef.current && socket.current && map.current && pistol.current && pistol2.current && 
+                wall.current && item_img.current && knife.current && knife2.current
+            )
+        }
+
+        const waitForReady = () =>{
+            return new Promise((resolve) => {
+                const checkAndResolve = () => {
+                    if (check_ready()) {
+                        resolve(); // 조건이 충족되면 Promise 해결
+                    } else {
+                        setTimeout(checkAndResolve, 50); // 일정 시간 후에 다시 확인
+                    }
+                };
+                checkAndResolve(); // 최초 한 번 호출
+            });
+        }
+
+        const setupInterval = async() => {
+            await waitForReady();
             const canvas = canvasRef.current;
             canvas.width = canvas_w;
             canvas.height = canvas_h;
@@ -504,19 +566,22 @@ function MainGame() {
 
             const intervalId1 = setInterval(() => {
                 updatesound();
-             }, 500);
+            }, 300);
             
-
             return () => {
                 clearInterval(intervalId);
                 clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
         }
+
+        if(myId){
+            setupInterval();
+        } 
       }, [myId]);
 
 
     useEffect(()=>{
-        if(interact){
+        if(interact && heartbeat_src.paused){
             heartbeat_src.play();
             soundplay.current=true;
         }
@@ -534,25 +599,27 @@ function MainGame() {
             };
     
         }
-
-        if(!heartbeat_src.paused || soundplay.current){
-            heartbeat_src.pause();
+        if(heartbeat_sound_ready.current && soundplay.current){
+            if(!heartbeat_src.paused) heartbeat_src.pause();
             if(closestdistance<250){
                 heartbeat_src.playbackRate=3;
-                heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play();
             }
             else if(closestdistance<500){
                 heartbeat_src.playbackRate=2;
-                heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play();
             }
             else {
                 heartbeat_src.playbackRate=1;
-                heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play();
             }
         }
     }
 
     const renderGame = () => {
+        if(!canvasRef || !canvasRef.current){ 
+            return;
+        }
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
         let cur = get_player.current[myId];
@@ -668,10 +735,10 @@ function MainGame() {
                 if(weaponstate.current===1){
                     drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2);
                 }
-                else if(weaponstate.current===3){
+                else if(weaponstate.current===3 || weaponstate.current===3.5){
                     drawProgressBar(tx-30, ty-35, num_fire.current, total_fire_num,'#FE2E64', 58, 2);
                 }
-                else if(weaponstate.current===4){
+                else if(weaponstate.current===4 || weaponstate.current===4.5){
                     drawProgressBar(tx-30, ty-35, num_bomb.current, total_bomb_num,'#FE2E64', 58, 2);
                 }
             }
@@ -871,6 +938,9 @@ function MainGame() {
 
             context.translate(fire_cur.x - cameraX, fire_cur.y- cameraY);
             context.rotate(fire_cur.angle);
+
+            const scale = 1.5 -fire_cur.life / 50;
+            context.scale(-scale, scale);
             context.drawImage(fire_img.current, -fire_img.current.width / 2, -fire_img.current.height / 2);
             context.rotate(-fire_cur.angle);
             context.translate(-fire_cur.x + cameraX, fire_cur.y + cameraY);
@@ -954,7 +1024,7 @@ function MainGame() {
             };
 
             if(isWithin && !iswall){
-                context.drawImage(item_img.current, item_cur.x - cameraX, item_cur.y - cameraY);   
+                context.drawImage(item_img.current, item_cur.x - cameraX, item_cur.y - cameraY, item_img.current.width * 1.5, item_img.current.height * 1.5);   
             }
         }
 
@@ -1094,8 +1164,8 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, bullet_cur);
                     // bullet_cur.user로 점수나 킬 올리기
-                    if(!heartbeat_src.paused) heartbeat_src.pause();
-                    navigate('../Restart', {replace:false, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
+                    closeAllSound();
+                    navigate('../Restart', {replace:true, state:{nickname : nickname, who : bullet_cur.user_name, error:false}});
                 }
             }
         }
@@ -1107,8 +1177,8 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, knifeswing);
                     // bullet_cur.user로 점수나 킬 올리기
-                    if(!heartbeat_src.paused) heartbeat_src.pause();
-                    navigate('../Restart', {replace:false, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
+                    closeAllSound();
+                    navigate('../Restart', {replace:true, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
                 }
             }
         }
@@ -1121,7 +1191,7 @@ function MainGame() {
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, fire);
                     // bullet_cur.user로 점수나 킬 올리기
-                    if(!heartbeat_src.paused) heartbeat_src.pause();
+                    closeAllSound();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : fire.user_name, error:false}});
                 }
             }
