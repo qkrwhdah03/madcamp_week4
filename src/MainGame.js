@@ -55,6 +55,9 @@ function MainGame() {
     const knife_sound_ready = useRef(false);
     const fire_sound_ready = useRef(false);
     const firereload_sound_ready = useRef(false);
+    const grenade_use_sound_ready = useRef(false);
+    const grenade_explode_sound_ready = useRef(false);
+
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
     const pressUp  =  useRef(false);
@@ -90,6 +93,8 @@ function MainGame() {
     const knifesound_src = new Audio(process.env.PUBLIC_URL + '/sounds/knife.mp3');
     const firesound_src = new Audio(process.env.PUBLIC_URL + '/sounds/fire.mp3');
     const firereload_src = new Audio(process.env.PUBLIC_URL + '/sounds/firereload.mp3');
+    const grenade_use_sound_src = new Audio(process.env.PUBLIC_URL + '/sounds/bombthrow.mp3');
+    const grenade_explode_sound_src = new Audio(process.env.PUBLIC_URL + '/sounds/explosion.mp3');
     const velocity = 4; // 유저 이동 속도
     const bulletvelocity = 20; // 총알 속도
     const firevelocity = 5;
@@ -132,6 +137,12 @@ function MainGame() {
     firereload_src.addEventListener('canplaythrough', () => {
         firereload_sound_ready.current = true;
     });
+    grenade_use_sound_src.addEventListener('canplaythrough', () => {
+        grenade_use_sound_ready.current = true;
+    });
+    grenade_explode_sound_src .addEventListener('canplaythrough', () => {
+        grenade_explode_sound_ready.current = true;
+    });
 
     const closeAllSound = () => {
         if(!reload_src.paused) reload_src.pause();
@@ -140,6 +151,8 @@ function MainGame() {
         if(!firesound_src.paused) firesound_src.pause();
         if(!firereload_src.paused) firereload_src.pause();
         if(!knifesound_src.paused) knifesound_src.pause();
+        if(!grenade_use_sound_src.paused) grenade_use_sound_src.pause();
+        if(!grenade_explode_sound_src.paused) grenade_explode_sound_src.pause();
     };
 
     // User 상태 관련 변수들
@@ -157,7 +170,6 @@ function MainGame() {
         // 초기화 
         get_player.current = {};
         setinteract(false);
-
 
         // 배경 map 읽어오기
         const image = new Image();
@@ -459,8 +471,12 @@ function MainGame() {
             }
             else if(weaponstate.current===4 && num_bomb.current){
                 weaponstate.current=4.5;
-                bombthrowing.current=25;
+                bombthrowing.current=50;
                 bombposition.current=mouseposition;
+                if(num_bomb.current > 0 && soundplay.current){
+                    grenade_use_sound_src.currentTime =0;
+                    grenade_use_sound_src.play();
+                }
             }
         };
 
@@ -979,6 +995,9 @@ function MainGame() {
                 context.scale(3, 3);
                 context.drawImage(explosion_gif.current[32-bomb_cur.life], -explosion_gif.current[32-bomb_cur.life].width / 2, -explosion_gif.current[32-bomb_cur.life].height / 2);
                 context.restore(); 
+                if(bomb_cur.life === 32 && soundplay && grenade_explode_sound_ready.current && calculateDistance(bomb_cur.x, bomb_cur.y, cur.x, cur.y) < 500){
+                    grenade_explode_sound_src.play();
+                }
             }
             if(bomb_cur.life===0){
                 continue;
@@ -1205,7 +1224,7 @@ function MainGame() {
                     if(cur.state <= 0){ // 사망 처리
                         socket.current.emit("death", cur, bomb);
                         // bullet_cur.user로 점수나 킬 올리기
-                        if(!heartbeat_src.paused) heartbeat_src.pause();
+                        closeAllSound();
                         navigate('../Restart', {replace:false, state:{nickname : nickname, who : bomb.user_name, error:false}});
                     }
                 }
