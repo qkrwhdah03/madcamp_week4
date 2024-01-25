@@ -28,6 +28,7 @@ function MainGame() {
 
     // 맵 배경 이미지 저장 변수
     const map = useRef(null);
+    const blood = useRef(null);
     const pistol = useRef(null);
     const pistol2 = useRef(null);
     const knife = useRef(null);
@@ -74,6 +75,7 @@ function MainGame() {
 
     // 변수 값 설정
     const map_src = '/map.png'; // 배경맵 경로
+    const blood_src = 'blood.png';
     const pistol_src = '/troop/handgun/move/survivor-move_handgun_0.png'; // 유저 캐릭터 경로
     const pistol_src2 = '/troop/handgun/reload/survivor-reload_handgun_9.png'; // 유저 캐릭터 경로  
     const knife_src = './troop/knife/meleeattack/survivor-meleeattack_knife_0.png';
@@ -86,7 +88,6 @@ function MainGame() {
     const item_src = '/Apple.png'
     const fire_src = '/fire.png';
     const bombthrow_src = '/bomb.png';
-    const explosion_src = '';
     const reload_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
     const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
     const pistolsound_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
@@ -163,7 +164,7 @@ function MainGame() {
     const firing = useRef(0);
     const num_bomb = useRef(total_bomb_num);
     const bombthrowing = useRef(0);
-
+    const bloodlife = useRef(0);
 
     useEffect(()=>{
 
@@ -177,6 +178,13 @@ function MainGame() {
         image.onload = () =>{
             console.log("Read Map Image Done");
             map.current = image;
+        }
+
+        const image1 = new Image();
+        image1.src = process.env.PUBLIC_URL + blood_src; // 이미지 파일 경로 설정
+        image1.onload = () =>{
+            console.log("Read Map Image Done");
+            blood.current = image1;
         }
 
         // map에서 wall 정보 읽어오기
@@ -381,6 +389,7 @@ function MainGame() {
         });
 
         const handleKeyDown = (e)=>{
+            setinteract(true);
             switch (e.key.toLowerCase()) {
                 case 'a':
                     pressLeft.current = true; 
@@ -880,8 +889,8 @@ function MainGame() {
                             fire.current[0]-context.canvas.offsetLeft-cur.x+cameraX
                         )
                         socket.current.emit("shoot_fire", {
-                            x: cur.x + 30*Math.cos(angle)-20*Math.sin(angle), //캐릭터 총구로 보정 
-                            y: cur.y +30*Math.sin(angle)+20*Math.cos(angle), // 캐릭터 총구로 보정
+                            x: cur.x + 50*Math.cos(angle)-20*Math.sin(angle), //캐릭터 총구로 보정 
+                            y: cur.y + 50*Math.sin(angle)+20*Math.cos(angle), // 캐릭터 총구로 보정
                             angle:angle,
                             user : cur.id, // 누가 쐈는지 저장
                             user_name : cur.nickname,
@@ -898,7 +907,7 @@ function MainGame() {
             }
             else {
                 if(reload_frame_number.current===reload_time / rendering_interval){
-                    console.log('reload');
+                  
                     reload();
                 }
                 // 재장전
@@ -1011,7 +1020,7 @@ function MainGame() {
             context.translate(-bomb_cur.x + cameraX, bomb_cur.y + cameraY);
             context.restore(); 
             if(bomb_cur.life<33){
-                console.log(bomb_cur.life);
+               
                 context.save();
                 context.translate(bomb_cur.x - cameraX, bomb_cur.y- cameraY+90);
                 context.scale(3, 3);
@@ -1075,6 +1084,8 @@ function MainGame() {
         // 아이템 충돌처리
         handleEatItem(cur);
         
+        const beforestate = cur.state;
+
         // 총알 충돌처리 
         handleCollisions(cur);
 
@@ -1096,6 +1107,20 @@ function MainGame() {
                 show_kill.current = null; 
             }
         }
+
+        const afterstate =cur.state;
+
+        if(beforestate!==afterstate){
+            bloodlife.current=10;
+        }
+        if(bloodlife.current4>0){
+            bloodlife.current-=1;
+            context.globalAlpha = 0.3;
+            context.drawImage(blood.current, cameraX, cameraY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+            context.globalAlpha = 1.0;
+        }
+
+
         
         // 킬 수 표시하기
         context.font = '20px Arial';
@@ -1247,7 +1272,7 @@ function MainGame() {
 
         for(let i=0; i<fires.current.length;i++){
             const fire = fires.current[i];
-            if (checkCollision(cur, fire, bullet_collision_distance)){
+            if (checkCollision(cur, fire, 40)){
                 cur.state-=0.5;
                 if(cur.state <= 0){ // 사망 처리
                     socket.current.emit("death", cur, fire);
@@ -1261,7 +1286,7 @@ function MainGame() {
         for(let i=0; i<bombs.current.length;i++){
             const bomb = bombs.current[i];
             if (bomb.life===32){
-                if (checkCollision(cur, bomb, 120)){
+                if (checkCollision(cur, bomb, 150)){
                     cur.state-=80;
                     if(cur.state <= 0){ // 사망 처리
                         socket.current.emit("death", cur, bomb);
