@@ -18,6 +18,8 @@ function MainGame() {
     const knifeswings = useRef([]);
     const fire = useRef(null);
     const fires = useRef([]);
+    const bombposition = useRef(null);
+    const bombs = useRef([]);
 
     const items = useRef({});
 
@@ -31,9 +33,13 @@ function MainGame() {
     const knife = useRef(null);
     const knife2 = useRef(null);
     const fireshot = useRef(null);
+    const bomb = useRef(null);
+    const bomb2 = useRef(null);
     const bullet_img = useRef(null);
     const item_img = useRef(null);
     const fire_img = useRef(null);
+    const bomb_img = useRef(null);
+    const explosion_gif = useRef([]);
 
     const wall = useRef(null); //##########################################(1)
 
@@ -43,13 +49,6 @@ function MainGame() {
     // 소리 재생을 위한 상호작용 변수 선언
     const [interact, setinteract] = useState(false);
     const soundplay = useRef(false);
-    const reload_sound_ready = useRef(false);
-    const heartbeat_sound_ready = useRef(false);
-    const pistol_sound_ready = useRef(false);
-    const knife_sound_ready = useRef(false);
-    const fire_sound_ready = useRef(false);
-    const firereload_sound_ready = useRef(false);
-
 
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
@@ -72,10 +71,14 @@ function MainGame() {
     const knife_src = './troop/knife/meleeattack/survivor-meleeattack_knife_0.png';
     const knife_src2 = './troop/knife/meleeattack/survivor-meleeattack_knife_7.png';
     const fireshot_src =  './troop/shotgun/idle/survivor-idle_shotgun_0.png';
+    const bomb_src =  './troop/flashlight/meleeattack/survivor-meleeattack_flashlight_9.png';
+    const bomb_src2 =  './troop/flashlight/meleeattack/survivor-meleeattack_flashlight_1.png';
     const wall_src = '/wall_data.json'
     const bullet_src = '/bullet.png';
     const item_src = '/box.png'
     const fire_src = '/fire.png';
+    const bombthrow_src = '/bomb.png';
+    const explosion_src = '';
     const reload_src = new Audio(process.env.PUBLIC_URL +'/sounds/reload.mp3');
     const heartbeat_src = new Audio(process.env.PUBLIC_URL +'/sounds/heartbeat.mp3');
     const pistolsound_src = new Audio(process.env.PUBLIC_URL +'/sounds/pistol.mp3');
@@ -96,30 +99,11 @@ function MainGame() {
     const damage = 10;  // 총알 데미지
     const bullet_collision_distance = 20; // 총알 충돌 거리 설정
     const total_fire_num = 5;
+    const total_bomb_num = 2;
     const item_collision_distance = 30;
     const tile_size = 32; // Tiled tile하나 크기 32 px
     const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
     const kill_log_frame = 75;
-
-    // Sound 로딩 처리
-    reload_src.addEventListener('canplaythrough', () => {
-        reload_sound_ready.current = true;
-    });
-    heartbeat_src.addEventListener('canplaythrough', () => {
-        heartbeat_sound_ready.current = true;
-    });
-    pistolsound_src.addEventListener('canplaythrough', () => {
-        pistol_sound_ready.current = true;
-    });
-    knifesound_src.addEventListener('canplaythrough', () => {
-        knife_sound_ready.current = true;
-    });
-    firesound_src.addEventListener('canplaythrough', () => {
-        fire_sound_ready.current = true;
-    });
-    firereload_src.addEventListener('canplaythrough', () => {
-        firereload_sound_ready.current = true;
-    });
 
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
@@ -127,14 +111,14 @@ function MainGame() {
     const knifeswing = useRef(0);
     const num_fire = useRef(total_fire_num);
     const firing = useRef(0);
+    const num_bomb = useRef(total_bomb_num);
+    const bombthrowing = useRef(0);
 
 
     useEffect(()=>{
 
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
-        items.current = {};
-        kill_log.current = []; 
         setinteract(false);
         // 배경 map 읽어오기
         const image = new Image();
@@ -196,6 +180,20 @@ function MainGame() {
             fireshot.current = user_image5;
         }
 
+        const user_image6 = new Image();
+        user_image6.src = process.env.PUBLIC_URL + bomb_src;
+        user_image6.onload = ()=>{
+            console.log("Read user Image Done");
+            bomb.current = user_image6;
+        }
+
+        const user_image7 = new Image();
+        user_image7.src = process.env.PUBLIC_URL + bomb_src2;
+        user_image7.onload = ()=>{
+            console.log("Read user Image Done");
+            bomb2.current = user_image7;
+        }
+
         // 총알 이미지 가져오기
         const bullet_image = new Image();
         bullet_image.src = process.env.PUBLIC_URL + bullet_src;
@@ -218,6 +216,23 @@ function MainGame() {
             console.log("Read Item Image Done");
             fire_img.current = fire_image;
         }
+
+        const bomb_image = new Image();
+        bomb_image.src = process.env.PUBLIC_URL + bombthrow_src;
+        bomb_image.onload = ()=>{
+            console.log("Read bomb Image Done");
+            bomb_img.current = bomb_image;
+        }
+
+        for (let i=0; i<33; i++){
+            const explosion_image = new Image();
+            explosion_image.src = process.env.PUBLIC_URL + `./explosion/explosion-${String(i).padStart(4, '0')}-removebg-preview.png`;
+            explosion_image.onload = ()=>{
+                console.log("Read explosion Image Done");
+                explosion_gif.current.push(explosion_image);
+            }
+        }
+
 
         const soc = io.connect("http://172.10.5.177:80", {transports:['websocket']});
 
@@ -263,8 +278,8 @@ function MainGame() {
                 player.dy = data.dy;
                 player.state = data.state;
                 player.kill = data.kill;
-                player.hit = data.hit;
-                player.weapon = data.weapon;
+                player.hit=data.hit;
+                player.weapon=data.weapon;
             }
         });
 
@@ -286,12 +301,16 @@ function MainGame() {
             knifeswings.current.push(data);
         });
 
+        soc.on("bombs", (data)=>{
+            bombs.current.push(data);
+        });
+
         soc.on('deletebullet', (data)=>{
             delete bullets.current[data.bulletId];
         });
 
         soc.on('killed', (dead, user)=>{
-            const player = get_player.current[user.user];
+            const player = get_player.current[user.id];
             if(player){
                 player.kill += 1;
             }
@@ -343,6 +362,9 @@ function MainGame() {
                 case '3':
                     weaponstate.current=3;
                     break;
+                case '4':
+                    weaponstate.current=4;
+                    break;
                 default:
                     break;
               }
@@ -371,32 +393,31 @@ function MainGame() {
             const mouseposition = [e.clientX,e.clientY];
             if(weaponstate.current===1){
                 bullet.current=mouseposition;
-                if(num_bullet.current>0 && soundplay.current && pistol_sound_ready.current){
-                    if(!pistolsound_src.paused) pistolsound_src.pause();
+                if(num_bullet.current>0 && soundplay.current){
                     pistolsound_src.currentTime=0;
                     pistolsound_src.play();
                 }
             }
             else if(weaponstate.current===2){
-                weaponstate.current=2.5;  // 공격중
+                weaponstate.current=2.5;
                 knifeposition.current=mouseposition;
                 knifeswing.current=25;
                 knifesound_src.currentTime=0;
-                if(soundplay.current && knife_sound_ready.current){
-                    if(!knifesound_src.paused) knifesound_src.pause();
-                    knifesound_src.play();
-                }
+                knifesound_src.play();
             }
             else if(weaponstate.current===3){
                 weaponstate.current=3.5;
                 firing.current=25;
                 fire.current=mouseposition;
-                if(num_fire.current>0 && soundplay.current && fire_sound_ready.current){
-                    if(!firesound_src.paused) firesound_src.pause();
+                if(num_fire.current>0 && soundplay.current){
                     firesound_src.currentTime=0;
                     firesound_src.play();
-                }
-                
+                }  
+            }
+            else if(weaponstate.current===4 && num_bomb.current){
+                weaponstate.current=4.5;
+                bombthrowing.current=25;
+                bombposition.current=mouseposition;
             }
         };
 
@@ -425,6 +446,12 @@ function MainGame() {
         window.addEventListener("mousemove", handleMouseMove);
         document.addEventListener('visibilitychange', handleVisibilityChange); 
 
+        // heartbeat_src.addEventListener('ended', function() {
+        //     console.log('끝낫습니다');
+        //     heartbeat_src.currentTime = 0; 
+        //     heartbeat_src.play();
+        // }, false);
+
         return () => {
             soc.disconnect();
             window.removeEventListener("keydown", handleKeyDown);
@@ -433,19 +460,17 @@ function MainGame() {
             window.removeEventListener("mousemove", handleMouseMove);
             document.removeEventListener('visibilitychange', handleVisibilityChange); 
 
-            if(!reload_src.paused) reload_src.pause();
-            if(!heartbeat_src.paused) heartbeat_src.pause();
-            if(!pistolsound_src.paused) pistolsound_src.pause();
-            if(!firesound_src.paused) firesound_src.pause();
-            if(!firereload_src.paused) firereload_src.pause();
-            if(!knifesound_src.paused) knifesound_src.pause();
+            reload_src.pause();
+            heartbeat_src.pause();
+            pistolsound_src.pause();
+            knifesound_src.pause();
         };
     }, []);
 
     const reload = () => {
         if(weaponstate.current===1){
             reload_src.currentTime=0;
-            if(soundplay.current && reload_sound_ready && reload_src?.paused){
+            if(soundplay.current){
                 reload_src.play();
             }
             setTimeout(() => {
@@ -455,7 +480,7 @@ function MainGame() {
         }
         else if(weaponstate.current===3 || weaponstate.current===3.5){
             firereload_src.currentTime=0;
-            if(soundplay.current && firereload_sound_ready && firereload_src?.paused){
+            if(soundplay.current){
                 firereload_src.play();
             }
             setTimeout(() => {
@@ -486,7 +511,7 @@ function MainGame() {
                 clearInterval(intervalId);
                 clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
-        } 
+        }
       }, [myId]);
 
 
@@ -510,7 +535,7 @@ function MainGame() {
     
         }
 
-        if(heartbeat_sound_ready.current && (!heartbeat_src?.paused || soundplay.current)){
+        if(!heartbeat_src.paused || soundplay.current){
             heartbeat_src.pause();
             if(closestdistance<250){
                 heartbeat_src.playbackRate=3;
@@ -643,10 +668,14 @@ function MainGame() {
                 if(weaponstate.current===1){
                     drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2);
                 }
-                else if(weaponstate.current===3 || weaponstate.current === 3.5){
+                else if(weaponstate.current===3){
                     drawProgressBar(tx-30, ty-35, num_fire.current, total_fire_num,'#FE2E64', 58, 2);
                 }
+                else if(weaponstate.current===4){
+                    drawProgressBar(tx-30, ty-35, num_bomb.current, total_bomb_num,'#FE2E64', 58, 2);
+                }
             }
+
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
@@ -668,12 +697,19 @@ function MainGame() {
             else if(user.weapon===3 || user.weapon===3.5){
                 context.drawImage(fireshot.current, -fireshot.current.width / 2, -fireshot.current.height / 2);
             }
+            else if(user.weapon===4){
+                context.drawImage(bomb.current, -bomb.current.width / 2, -bomb.current.height / 2);
+            }
+            else if(user.weapon===4.5){
+                context.drawImage(bomb2.current, -bomb2.current.width / 2, -bomb2.current.height / 2);
+            }
             context.rotate(-angle);
             context.translate(-tx, -ty);
             context.restore();
         }
 
         
+
          // 총알 발사 처리
         if (bullet.current){
             if(num_bullet.current > 0){ // 총알이 남아 있으면
@@ -771,6 +807,29 @@ function MainGame() {
             }
         }
 
+        if (bombposition.current){
+            if(num_bomb.current > 0){
+                bombthrowing.current -=1;
+                if (bombthrowing.current===24){
+                    const angle = Math.atan2(
+                        bombposition.current[1]-context.canvas.offsetTop-cur.y+cameraY,
+                        bombposition.current[0]-context.canvas.offsetLeft-cur.x+cameraX
+                    )
+                    socket.current.emit("bombthrowing", {
+                        x: cur.x + 200*Math.cos(angle), 
+                        y: cur.y + 200*Math.sin(angle), 
+                        user : cur.id,
+                        user_name : cur.nickname,
+                        life: 183
+                    })
+
+                }
+                if(bombthrowing.current===0){
+                    weaponstate.current=4;
+                    num_bomb.current-=1;
+                }
+            }
+        }
 
 
 
@@ -812,8 +871,6 @@ function MainGame() {
 
             context.translate(fire_cur.x - cameraX, fire_cur.y- cameraY);
             context.rotate(fire_cur.angle);
-            const scale = 1.5 -fire_cur.life / 50;
-            context.scale(scale, scale);
             context.drawImage(fire_img.current, -fire_img.current.width / 2, -fire_img.current.height / 2);
             context.rotate(-fire_cur.angle);
             context.translate(-fire_cur.x + cameraX, fire_cur.y + cameraY);
@@ -830,6 +887,38 @@ function MainGame() {
 
         }
         fires.current = filtered_fires;
+
+        const filtered_bombs = [];
+        for (let i=0; i<bombs.current.length; i++) {
+            let bomb_cur = bombs.current[i];
+            bomb_cur.life-=1;
+            
+            context.save();
+ 
+            context.translate(bomb_cur.x - cameraX, bomb_cur.y- cameraY);
+            context.rotate(bomb_cur.angle);
+            context.scale(2, 2);
+            context.drawImage(bomb_img.current, -bomb_img.current.width / 2, -bomb_img.current.height / 2);
+            context.rotate(-bomb_cur.angle);
+            context.translate(-bomb_cur.x + cameraX, bomb_cur.y + cameraY);
+            context.restore(); 
+            if(bomb_cur.life<33){
+                console.log(bomb_cur.life);
+                context.save();
+                context.translate(bomb_cur.x - cameraX, bomb_cur.y- cameraY+90);
+                context.scale(3, 3);
+                context.drawImage(explosion_gif.current[32-bomb_cur.life], -explosion_gif.current[32-bomb_cur.life].width / 2, -explosion_gif.current[32-bomb_cur.life].height / 2);
+                context.restore(); 
+            }
+            if(bomb_cur.life===0){
+                continue;
+            } else{
+                filtered_bombs.push(bomb_cur);
+            }
+
+        }
+        bombs.current = filtered_bombs;
+
 
         // 아이템 그리기
         for(let item_id in items.current){
@@ -887,7 +976,7 @@ function MainGame() {
         context.fillText("Total Users : "+ Object.keys(get_player.current).length, canvas.width-80, 30);
 
 
-        // 킬 로그
+        // 킬 로그'
         context.font = '20px Arial';
         const filtered_kill_log = [];
         const size = kill_log.current.length;
@@ -963,7 +1052,7 @@ function MainGame() {
         if(cur.hit){
             cur.hit-=1;
         }
-        cur.weapon = weaponstate.current;
+        cur.weapon=weaponstate.current;
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
@@ -1016,7 +1105,7 @@ function MainGame() {
             if (checkCollision(cur, knifeswing, bullet_collision_distance)){
                 cur.state-=50;
                 if(cur.state <= 0){ // 사망 처리
-                    socket.current.emit("deathknife", cur, knifeswing);
+                    socket.current.emit("death", cur, knifeswing);
                     // bullet_cur.user로 점수나 킬 올리기
                     if(!heartbeat_src.paused) heartbeat_src.pause();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : knifeswing.user_name, error:false}});
@@ -1030,13 +1119,29 @@ function MainGame() {
             if (checkCollision(cur, fire, bullet_collision_distance)){
                 cur.state-=0.5;
                 if(cur.state <= 0){ // 사망 처리
-                    socket.current.emit("deathknife", cur, fire);
+                    socket.current.emit("death", cur, fire);
                     // bullet_cur.user로 점수나 킬 올리기
                     if(!heartbeat_src.paused) heartbeat_src.pause();
                     navigate('../Restart', {replace:false, state:{nickname : nickname, who : fire.user_name, error:false}});
                 }
             }
         }
+
+        for(let i=0; i<bombs.current.length;i++){
+            const bomb = bombs.current[i];
+            if (bomb.life===32){
+                if (checkCollision(cur, bomb, 120)){
+                    cur.state-=80;
+                    if(cur.state <= 0){ // 사망 처리
+                        socket.current.emit("death", cur, bomb);
+                        // bullet_cur.user로 점수나 킬 올리기
+                        if(!heartbeat_src.paused) heartbeat_src.pause();
+                        navigate('../Restart', {replace:false, state:{nickname : nickname, who : bomb.user_name, error:false}});
+                    }
+                }
+            }
+        }
+
     }  
 
     function handleEatItem(cur){
@@ -1044,9 +1149,8 @@ function MainGame() {
             const item_cur = items.current[item_id];
             if(checkCollision(cur, item_cur, item_collision_distance)){
                 cur.state += 50;
-                if(cur.state > 100) {
-                    cur.state = 100;
-                }
+                if(cur.state > 100) cur.state = 100;
+
                 delete items.current[item_id];
                 socket.current.emit('eat_item', item_id);
             }
