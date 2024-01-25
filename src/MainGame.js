@@ -106,6 +106,8 @@ function MainGame() {
 
         // 초기화 후, socket.io connection 만들기
         get_player.current = {};
+        items.current = {};
+        kill_log.current = []; 
         setinteract(false);
         // 배경 map 읽어오기
         const image = new Image();
@@ -234,8 +236,8 @@ function MainGame() {
                 player.dy = data.dy;
                 player.state = data.state;
                 player.kill = data.kill;
-                player.hit=data.hit;
-                player.weapon=data.weapon;
+                player.hit = data.hit;
+                player.weapon = data.weapon;
             }
         });
 
@@ -262,7 +264,7 @@ function MainGame() {
         });
 
         soc.on('killed', (dead, user)=>{
-            const player = get_player.current[user.id];
+            const player = get_player.current[user.user];
             if(player){
                 player.kill += 1;
             }
@@ -342,23 +344,25 @@ function MainGame() {
             const mouseposition = [e.clientX,e.clientY];
             if(weaponstate.current===1){
                 bullet.current=mouseposition;
-                if(num_bullet.current>0 && soundplay.current){
+                if(num_bullet.current>0 && soundplay.current && pistolsound_src.paused){
                     pistolsound_src.currentTime=0;
                     pistolsound_src.play();
                 }
             }
             else if(weaponstate.current===2){
-                weaponstate.current=2.5;
+                weaponstate.current=2.5;  // 공격중
                 knifeposition.current=mouseposition;
                 knifeswing.current=25;
                 knifesound_src.currentTime=0;
-                knifesound_src.play();
+                if(soundplay.current && knifesound_src.paused){
+                    knifesound_src.play();
+                }
             }
             else if(weaponstate.current===3){
                 weaponstate.current=3.5;
                 firing.current=25;
                 fire.current=mouseposition;
-                if(num_fire.current>0 && soundplay.current){
+                if(num_fire.current>0 && soundplay.current && firesound_src.paused){
                     firesound_src.currentTime=0;
                     firesound_src.play();
                 }
@@ -391,12 +395,6 @@ function MainGame() {
         window.addEventListener("mousemove", handleMouseMove);
         document.addEventListener('visibilitychange', handleVisibilityChange); 
 
-        // heartbeat_src.addEventListener('ended', function() {
-        //     console.log('끝낫습니다');
-        //     heartbeat_src.currentTime = 0; 
-        //     heartbeat_src.play();
-        // }, false);
-
         return () => {
             soc.disconnect();
             window.removeEventListener("keydown", handleKeyDown);
@@ -408,6 +406,8 @@ function MainGame() {
             reload_src.pause();
             heartbeat_src.pause();
             pistolsound_src.pause();
+            firesound_src.pause();
+            firereload_src.pause();
             knifesound_src.pause();
         };
     }, []);
@@ -415,7 +415,7 @@ function MainGame() {
     const reload = () => {
         if(weaponstate.current===1){
             reload_src.currentTime=0;
-            if(soundplay.current){
+            if(soundplay.current && reload_src.paused){
                 reload_src.play();
             }
             setTimeout(() => {
@@ -425,7 +425,7 @@ function MainGame() {
         }
         else if(weaponstate.current===3 || weaponstate.current===3.5){
             firereload_src.currentTime=0;
-            if(soundplay.current){
+            if(soundplay.current && firereload_src.paused){
                 firereload_src.play();
             }
             setTimeout(() => {
@@ -857,7 +857,7 @@ function MainGame() {
         context.fillText("Total Users : "+ Object.keys(get_player.current).length, canvas.width-80, 30);
 
 
-        // 킬 로그'
+        // 킬 로그
         context.font = '20px Arial';
         const filtered_kill_log = [];
         const size = kill_log.current.length;
@@ -933,7 +933,7 @@ function MainGame() {
         if(cur.hit){
             cur.hit-=1;
         }
-        cur.weapon=weaponstate.current;
+        cur.weapon = weaponstate.current;
         // 위치 정보 서버에 보내기
         socket.current.emit("send_location", cur);
     };
@@ -1014,8 +1014,9 @@ function MainGame() {
             const item_cur = items.current[item_id];
             if(checkCollision(cur, item_cur, item_collision_distance)){
                 cur.state += 50;
-                if(cur.state > 100) cur.state = 100;
-
+                if(cur.state > 100) {
+                    cur.state = 100;
+                }
                 delete items.current[item_id];
                 socket.current.emit('eat_item', item_id);
             }
