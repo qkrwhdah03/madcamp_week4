@@ -115,8 +115,8 @@ function MainGame() {
     const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
     const kill_log_frame = 75;
 
-    // 소리 로딩 완료 변수
-    
+    // 킬 정보 저장 변수
+    const show_kill = useRef(null);
 
     // Sound 로딩 처리
     reload_src.addEventListener('canplaythrough', () => {
@@ -364,6 +364,10 @@ function MainGame() {
             const player = get_player.current[user.user];
             if(player){
                 player.kill += 1;
+            }
+            if(soc.id === user.user){
+                console.log("You killed");
+                show_kill.current = {dead: dead, life : 100};
             }
             kill_log.current.push({kill:user.user_name, dead:dead.nickname, life: kill_log_frame});
         });
@@ -1074,6 +1078,24 @@ function MainGame() {
         // 총알 충돌처리 
         handleCollisions(cur);
 
+        // 킬 하면 킬한 사람 정보 띄우기
+        if(show_kill.current){
+            const dead = show_kill.current.dead;
+            const life = show_kill.current.life;
+            console.log("111", dead, life);
+            if(life > 0){   
+                context.textAlign = 'center';
+                context.fillStyle = '#FF0000';
+                context.font = '25px Arial';   
+                context.fillText(cur.kill +" Kill", canvas.width/2, 2*canvas.height/3);
+                context.fillStyle = '#FFF';
+                context.font = '20px Arial';
+                context.fillText("You killed "+ dead.nickname, canvas.width/2, 2*canvas.height/3 + 27);
+                show_kill.current = {dead:dead, life:life-1};
+            } else {
+                show_kill.current = null; 
+            }
+        }
         
         // 킬 수 표시하기
         context.font = '20px Arial';
