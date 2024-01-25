@@ -43,6 +43,13 @@ function MainGame() {
     // 소리 재생을 위한 상호작용 변수 선언
     const [interact, setinteract] = useState(false);
     const soundplay = useRef(false);
+    const reload_sound_ready = useRef(false);
+    const heartbeat_sound_ready = useRef(false);
+    const pistol_sound_ready = useRef(false);
+    const knife_sound_ready = useRef(false);
+    const fire_sound_ready = useRef(false);
+    const firereload_sound_ready = useRef(false);
+
 
     // 키보드 입력 상태 받기 (asdf)
     const pressDown = useRef(false);
@@ -93,6 +100,26 @@ function MainGame() {
     const tile_size = 32; // Tiled tile하나 크기 32 px
     const vision_angle = Math.PI / 4; // 전체 시야각의 절반임
     const kill_log_frame = 75;
+
+    // Sound 로딩 처리
+    reload_src.addEventListener('canplaythrough', () => {
+        reload_sound_ready.current = true;
+    });
+    heartbeat_src.addEventListener('canplaythrough', () => {
+        heartbeat_sound_ready.current = true;
+    });
+    pistolsound_src.addEventListener('canplaythrough', () => {
+        pistol_sound_ready.current = true;
+    });
+    knifesound_src.addEventListener('canplaythrough', () => {
+        knife_sound_ready.current = true;
+    });
+    firesound_src.addEventListener('canplaythrough', () => {
+        fire_sound_ready.current = true;
+    });
+    firereload_src.addEventListener('canplaythrough', () => {
+        firereload_sound_ready.current = true;
+    });
 
     // User 상태 관련 변수들
     const num_bullet = useRef(total_bullet_num); // 탄창 속 총알 수
@@ -344,7 +371,8 @@ function MainGame() {
             const mouseposition = [e.clientX,e.clientY];
             if(weaponstate.current===1){
                 bullet.current=mouseposition;
-                if(num_bullet.current>0 && soundplay.current && pistolsound_src.paused){
+                if(num_bullet.current>0 && soundplay.current && pistol_sound_ready.current){
+                    if(!pistolsound_src.paused) pistolsound_src.pause();
                     pistolsound_src.currentTime=0;
                     pistolsound_src.play();
                 }
@@ -354,7 +382,8 @@ function MainGame() {
                 knifeposition.current=mouseposition;
                 knifeswing.current=25;
                 knifesound_src.currentTime=0;
-                if(soundplay.current && knifesound_src.paused){
+                if(soundplay.current && knife_sound_ready.current){
+                    if(!knifesound_src.paused) knifesound_src.pause();
                     knifesound_src.play();
                 }
             }
@@ -362,7 +391,8 @@ function MainGame() {
                 weaponstate.current=3.5;
                 firing.current=25;
                 fire.current=mouseposition;
-                if(num_fire.current>0 && soundplay.current && firesound_src.paused){
+                if(num_fire.current>0 && soundplay.current && fire_sound_ready.current){
+                    if(!firesound_src.paused) firesound_src.pause();
                     firesound_src.currentTime=0;
                     firesound_src.play();
                 }
@@ -403,19 +433,19 @@ function MainGame() {
             window.removeEventListener("mousemove", handleMouseMove);
             document.removeEventListener('visibilitychange', handleVisibilityChange); 
 
-            reload_src.pause();
-            heartbeat_src.pause();
-            pistolsound_src.pause();
-            firesound_src.pause();
-            firereload_src.pause();
-            knifesound_src.pause();
+            if(!reload_src.paused) reload_src.pause();
+            if(!heartbeat_src.paused) heartbeat_src.pause();
+            if(!pistolsound_src.paused) pistolsound_src.pause();
+            if(!firesound_src.paused) firesound_src.pause();
+            if(!firereload_src.paused) firereload_src.pause();
+            if(!knifesound_src.paused) knifesound_src.pause();
         };
     }, []);
 
     const reload = () => {
         if(weaponstate.current===1){
             reload_src.currentTime=0;
-            if(soundplay.current && reload_src.paused){
+            if(soundplay.current && reload_sound_ready && reload_src?.paused){
                 reload_src.play();
             }
             setTimeout(() => {
@@ -425,7 +455,7 @@ function MainGame() {
         }
         else if(weaponstate.current===3 || weaponstate.current===3.5){
             firereload_src.currentTime=0;
-            if(soundplay.current && firereload_src.paused){
+            if(soundplay.current && firereload_sound_ready && firereload_src?.paused){
                 firereload_src.play();
             }
             setTimeout(() => {
@@ -456,7 +486,7 @@ function MainGame() {
                 clearInterval(intervalId);
                 clearInterval(intervalId1); // 컴포넌트가 unmount될 때 interval 해제
             };
-        }
+        } 
       }, [myId]);
 
 
@@ -480,7 +510,7 @@ function MainGame() {
     
         }
 
-        if(!heartbeat_src.paused || soundplay.current){
+        if(heartbeat_sound_ready.current && (!heartbeat_src?.paused || soundplay.current)){
             heartbeat_src.pause();
             if(closestdistance<250){
                 heartbeat_src.playbackRate=3;
@@ -613,11 +643,10 @@ function MainGame() {
                 if(weaponstate.current===1){
                     drawProgressBar(tx-30, ty-35, num_bullet.current, total_bullet_num,'#FE2E64', 58, 2);
                 }
-                else if(weaponstate.current===3){
+                else if(weaponstate.current===3 || weaponstate.current === 3.5){
                     drawProgressBar(tx-30, ty-35, num_fire.current, total_fire_num,'#FE2E64', 58, 2);
                 }
             }
-
             context.translate(tx, ty);
             context.rotate(angle);
             context.scale(0.3, 0.3);
@@ -645,7 +674,6 @@ function MainGame() {
         }
 
         
-
          // 총알 발사 처리
         if (bullet.current){
             if(num_bullet.current > 0){ // 총알이 남아 있으면
@@ -784,6 +812,8 @@ function MainGame() {
 
             context.translate(fire_cur.x - cameraX, fire_cur.y- cameraY);
             context.rotate(fire_cur.angle);
+            const scale = 1.5 -fire_cur.life / 50;
+            context.scale(scale, scale);
             context.drawImage(fire_img.current, -fire_img.current.width / 2, -fire_img.current.height / 2);
             context.rotate(-fire_cur.angle);
             context.translate(-fire_cur.x + cameraX, fire_cur.y + cameraY);
