@@ -14,12 +14,19 @@
 - 카이스트 22학번 전산학부 박종모 
 
 ## 기술스택
-- 프론트엔드 : React - Canvas를 이용한 2D 렌더링 
-- 백엔드 :  Node.js - express, socket.io, http 등 
-- 디자인 소스
-  * 맵
-  * 캐릭터
-  * 소리
+### 프론트엔드 : React - Canvas를 이용한 2D 렌더링 
+### 백엔드 :  Node.js - express, socket.io, http 등 
+### 디자인 소스
+
+#### 플레이어
+- [Animated Top-Down Survivor Player](https://opengameart.org/content/animated-top-down-survivor-player)
+
+#### 배경
+- [Free Forest Tiles](https://rengodev.itch.io/free-forest-tiles)
+- [Rogue Fantasy Catacombs](https://szadiart.itch.io/rogue-fantasy-catacombs?downloa)
+
+#### 구조물
+- [Sci-Fi Space Simple Bullets](https://opengameart.org/content/sci-fi-space-simple-bullets)
 
 ## 게임 구성
   <img src="https://github.com/qkrwhdah03/madcamp_week4_front/assets/57566463/f086b49a-b9cf-41ec-9988-c67142c0be06"  alt="image" width="400" height="300" />
