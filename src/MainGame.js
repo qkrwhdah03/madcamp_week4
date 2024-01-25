@@ -361,7 +361,7 @@ function MainGame() {
         });
 
         soc.on('killed', (dead, user)=>{
-            const player = get_player.current[user.id];
+            const player = get_player.current[user.user];
             if(player){
                 player.kill += 1;
             }
