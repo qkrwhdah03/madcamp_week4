@@ -446,7 +446,9 @@ function MainGame() {
                 bullet.current=mouseposition;
                 if(num_bullet.current>0 && soundplay.current){
                     pistolsound_src.currentTime=0;
-                    if(pistolsound_src.paused) pistolsound_src.play();
+                    if(pistolsound_src.paused) pistolsound_src.play().catch(error =>{
+                        console.log("Pistol Sound Error :", error);
+                    }); 
                 }
             }
             else if(weaponstate.current===2){
@@ -457,7 +459,9 @@ function MainGame() {
 
                 if(soundplay.current && knife_sound_ready.current){
                     if(!knifesound_src.paused) knifesound_src.pause();
-                    if(knifesound_src.paused) knifesound_src.play();
+                    if(knifesound_src.paused) knifesound_src.play().catch(error =>{
+                        console.log("Knife Sound Error :", error);
+                    });
                 }
             }
             else if(weaponstate.current===3){
@@ -466,7 +470,9 @@ function MainGame() {
                 fire.current=mouseposition;
                 if(num_fire.current>0 && soundplay.current){
                     firesound_src.currentTime=0;
-                    firesound_src.play();
+                    if(firesound_src.paused) firesound_src.play().catch(error =>{
+                        console.log("FlameThrower Sound Error :", error);
+                    });
                 }  
             }
             else if(weaponstate.current===4 && num_bomb.current){
@@ -475,7 +481,9 @@ function MainGame() {
                 bombposition.current=mouseposition;
                 if(num_bomb.current > 0 && soundplay.current){
                     grenade_use_sound_src.currentTime =0;
-                    grenade_use_sound_src.play();
+                    if(grenade_use_sound_src.paused) grenade_use_sound_src.play().catch(error =>{
+                        console.log("Grenade Sound Error :", error);
+                    });
                 }
             }
         };
@@ -529,7 +537,9 @@ function MainGame() {
         if(weaponstate.current===1){
             reload_src.currentTime=0;
             if(soundplay.current && reload_sound_ready && reload_src.paused){
-                reload_src.play();
+                reload_src.play().catch(error =>{
+                    console.log("Reload Sound Error :", error);
+                });;
             }
             setTimeout(() => {
                 num_bullet.current = total_bullet_num;
@@ -598,7 +608,9 @@ function MainGame() {
 
     useEffect(()=>{
         if(interact && heartbeat_src.paused){
-            heartbeat_src.play();
+            heartbeat_src.play().catch(error =>{
+                console.log("Heartbeat Sound Error :", error);
+            });;
             soundplay.current=true;
         }
     },[interact]);
@@ -619,15 +631,21 @@ function MainGame() {
             if(!heartbeat_src.paused) heartbeat_src.pause();
             if(closestdistance<250){
                 heartbeat_src.playbackRate=3;
-                if(heartbeat_src.paused) heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play().catch(error =>{
+                    console.log("HeartBeat Sound Error :", error);
+                });
             }
             else if(closestdistance<500){
                 heartbeat_src.playbackRate=2;
-                if(heartbeat_src.paused) heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play().catch(error =>{
+                    console.log("HeartBeat Sound Error :", error);
+                });;
             }
             else {
                 heartbeat_src.playbackRate=1;
-                if(heartbeat_src.paused) heartbeat_src.play();
+                if(heartbeat_src.paused) heartbeat_src.play().catch(error =>{
+                    console.log("HeartBeat Sound Error :", error);
+                });;
             }
         }
     }
@@ -996,7 +1014,9 @@ function MainGame() {
                 context.drawImage(explosion_gif.current[32-bomb_cur.life], -explosion_gif.current[32-bomb_cur.life].width / 2, -explosion_gif.current[32-bomb_cur.life].height / 2);
                 context.restore(); 
                 if(bomb_cur.life === 32 && soundplay && grenade_explode_sound_ready.current && calculateDistance(bomb_cur.x, bomb_cur.y, cur.x, cur.y) < 500){
-                    grenade_explode_sound_src.play();
+                    if(!grenade_explode_sound_src.paused) grenade_explode_sound_src.play().catch(error =>{
+                        console.log("Grenade Explode Sound Error :", error);
+                    });
                 }
             }
             if(bomb_cur.life===0){
